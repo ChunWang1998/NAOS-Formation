@@ -194,6 +194,7 @@ contract Transmuter is Context {
         updateAccount(msg.sender)
         checkIfNewUser()
     {
+        
         // requires approval of NToken first
         address sender = msg.sender;
         //require tokens transferred in;

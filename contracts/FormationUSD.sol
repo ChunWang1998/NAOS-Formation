@@ -40,8 +40,8 @@ uint256 public test1;
   ///
   /// IMPORTANT: This constant is a raw FixedPointMath.uq192x64 value and assumes a resolution of 64 bits. If the
   ///            resolution for the FixedPointMath library changes this constant must change as well.
-  //uint256 public constant MINIMUM_COLLATERALIZATION_LIMIT = 1000000000000000000;
-  uint256 public constant MINIMUM_COLLATERALIZATION_LIMIT = 1000000;
+  uint256 public constant MINIMUM_COLLATERALIZATION_LIMIT = 1000000000000000000;
+  
 
   /// @dev The maximum value that the collateralization limit can be set to by the governance. This is a safety rail
   /// to prevent the collateralization from being set to a value which breaks the system.
@@ -50,8 +50,8 @@ uint256 public test1;
   ///
   /// IMPORTANT: This constant is a raw FixedPointMath.uq192x64 value and assumes a resolution of 64 bits. If the
   ///            resolution for the FixedPointMath library changes this constant must change as well.
-  //uint256 public constant MAXIMUM_COLLATERALIZATION_LIMIT = 4000000000000000000;
-  uint256 public constant MAXIMUM_COLLATERALIZATION_LIMIT = 4000000;
+  uint256 public constant MAXIMUM_COLLATERALIZATION_LIMIT = 4000000000000000000;
+  
 
 
   event GovernanceUpdated(
@@ -414,7 +414,8 @@ uint256 public test1;
   /// @return the amount of funds that were recalled from the vault to this contract and the decreased vault value.
   function recall(uint256 _vaultId, uint256 _amount) external nonReentrant expectInitialized returns (uint256, uint256) {
 
-    return _recallFunds(_vaultId, _amount);
+    //return _recallFunds(_vaultId, _amount);
+    return _recallFundsUSD(_vaultId, _amount);
   }
 
   /// @dev Recalls all the deposited funds from a vault to this contract.
@@ -465,11 +466,13 @@ uint256 public test1;
   ///
   /// @param _amount the amount of collateral to deposit.
   function deposit(uint256 _amount) external nonReentrant noContractAllowed expectInitialized {
+    _amount = _amount.mul(1000000000000);
 
     require(!emergencyExit, "emergency pause enabled");
     
     CDP.Data storage _cdp = _cdps[msg.sender];
     _cdp.update(_ctx);
+
 
     token.safeTransferFrom(msg.sender, address(this), _amount);
     if(_amount >= flushActivator) {
@@ -490,6 +493,7 @@ uint256 public test1;
   ///
   /// @param _amount the amount of collateral to withdraw.
   function withdraw(uint256 _amount) external nonReentrant noContractAllowed expectInitialized returns (uint256, uint256) {
+    _amount = _amount.mul(1000000000000);
     CDP.Data storage _cdp = _cdps[msg.sender];
     require(block.number > _cdp.lastDeposit, "");
 
@@ -497,6 +501,7 @@ uint256 public test1;
 
     (uint256 _withdrawnAmount, uint256 _decreasedValue) = _withdrawFundsTo(msg.sender, _amount);
     _cdp.totalDeposited = _cdp.totalDeposited.sub(_decreasedValue, "Exceeds withdrawable amount");
+    
     _cdp.checkHealth(_ctx, "Action blocked: unhealthy collateralization ratio");
 
     emit TokensWithdrawn(msg.sender, _amount, _withdrawnAmount, _decreasedValue);
@@ -511,8 +516,7 @@ uint256 public test1;
 
     CDP.Data storage _cdp = _cdps[msg.sender];
     _cdp.update(_ctx);
-    _childAmount = _childAmount.div(1000000000000);
-
+    _parentAmount = _parentAmount.mul(1000000000000);
 //USDT
     if (_parentAmount > 0) {
       token.safeTransferFrom(msg.sender, address(this), _parentAmount);
@@ -537,7 +541,7 @@ uint256 public test1;
   function liquidate(uint256 _amount) external nonReentrant noContractAllowed onLinkCheck expectInitialized returns (uint256, uint256) {
     CDP.Data storage _cdp = _cdps[msg.sender];
     _cdp.update(_ctx);
-    
+    _amount = _amount.mul(1000000000000);
     // don't attempt to liquidate more than is possible
     if(_amount > _cdp.totalDebt){
       _amount = _cdp.totalDebt;
@@ -563,9 +567,6 @@ uint256 public test1;
   /// @param _amount the amount of formation tokens to borrow.
     //我要借_amount,如果我的credit< 我要借的數量,credit 歸0並增加債務,然後去mint要借的token(nUSD)
   function mint(uint256 _amount) external nonReentrant noContractAllowed onLinkCheck expectInitialized {
-
-    _amount = _amount.div(1000000000000);// input is 18 deciamal
-
     CDP.Data storage _cdp = _cdps[msg.sender];
     _cdp.update(_ctx);
 
@@ -575,15 +576,14 @@ uint256 public test1;
       uint256 _remainingAmount = _amount.sub(_totalCredit);
       _cdp.totalDebt = _cdp.totalDebt.add(_remainingAmount);
       _cdp.totalCredit = 0;
-   
-test1 = 1;
       _cdp.checkHealth(_ctx, "Formation: Loan-to-value ratio breached");
     } else {
-      test1 = 2;
       _cdp.totalCredit = _totalCredit.sub(_amount);
     }
 
+   
     xtoken.mint(msg.sender, _amount);
+    //xtoken.mint(msg.sender, xtoken_mint_amt);
     if(_amount >= flushActivator) {
       flushActiveVault();
     }
@@ -740,6 +740,18 @@ test1 = 1;
     return (_withdrawnAmount, _decreasedValue);
   }
 
+   function _recallFundsUSD(uint256 _vaultId, uint256 _amount) internal returns (uint256, uint256) {
+    _amount = _amount.mul(1000000000000);
+    require(emergencyExit || msg.sender == governance || _vaultId != _vaults.lastIndex(), "Formation: not an emergency, not governance, and user does not have permission to recall funds from active vault");
+
+    Vault.Data storage _vault = _vaults.get(_vaultId);
+    (uint256 _withdrawnAmount, uint256 _decreasedValue) = _vault.withdraw(address(this), _amount);
+
+    emit FundsRecalled(_vaultId, _withdrawnAmount, _decreasedValue);
+
+    return (_withdrawnAmount, _decreasedValue);
+  }
+
   /// @dev Attempts to withdraw funds from the active vault to the recipient.
   ///
   /// Funds will be first withdrawn from this contracts balance and then from the active vault. This function
@@ -779,4 +791,6 @@ test1 = 1;
 
     return (_totalWithdrawn, _totalDecreasedValue);
   }
+
+
 }
