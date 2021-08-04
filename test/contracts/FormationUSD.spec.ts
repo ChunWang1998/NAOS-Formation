@@ -15,7 +15,7 @@ import { YearnVaultMockUsd } from "../../types/YearnVaultMockUsd";
 import { YearnControllerMock } from "../../types/YearnControllerMock";
 import { min } from "moment";
 const {parseEther, formatEther,parseUnits} = utils;
-const DEFAULT_FLUSH_ACTIVATOR_USD = BigNumber.from('100000000000');
+
 
 chai.use(solidity);
 chai.use(chaiSubset);
@@ -85,7 +85,7 @@ describe("Formation", () => {
             nUsd.address,
             await governance.getAddress(),
             await sentinel.getAddress(),
-            DEFAULT_FLUSH_ACTIVATOR_USD
+            DEFAULT_FLUSH_ACTIVATOR
           )
         ).revertedWith("Formation: token address cannot be 0x0.");
       });
@@ -99,7 +99,7 @@ describe("Formation", () => {
             ZERO_ADDRESS,
             await governance.getAddress(),
             await sentinel.getAddress(),
-            DEFAULT_FLUSH_ACTIVATOR_USD
+            DEFAULT_FLUSH_ACTIVATOR
           )
         ).revertedWith("Formation: xtoken address cannot be 0x0.");
       });
@@ -113,7 +113,7 @@ describe("Formation", () => {
             nUsd.address,
             ZERO_ADDRESS,
             await sentinel.getAddress(),
-            DEFAULT_FLUSH_ACTIVATOR_USD
+            DEFAULT_FLUSH_ACTIVATOR
           )
         ).revertedWith("Formation: governance address cannot be 0x0.");
       });
@@ -127,7 +127,7 @@ describe("Formation", () => {
             nUsd.address,
             await governance.getAddress(),
             ZERO_ADDRESS,
-            DEFAULT_FLUSH_ACTIVATOR_USD
+            DEFAULT_FLUSH_ACTIVATOR
           )
         ).revertedWith("Formation: sentinel address cannot be 0x0.");
       });
@@ -184,7 +184,7 @@ describe("Formation", () => {
         nUsd.address,
         await governance.getAddress(),
         await sentinel.getAddress(),
-        DEFAULT_FLUSH_ACTIVATOR_USD
+        DEFAULT_FLUSH_ACTIVATOR
       )) as FormationUsd;
 
     });
@@ -380,7 +380,7 @@ describe("Formation", () => {
         nUsd.address,
         await governance.getAddress(),
         await sentinel.getAddress(),
-        DEFAULT_FLUSH_ACTIVATOR_USD
+        DEFAULT_FLUSH_ACTIVATOR
       )) as FormationUsd;
 
       await formation
@@ -397,8 +397,9 @@ describe("Formation", () => {
       )) as Transmuter;
       await formation.connect(governance).setTransmuter(transmuterContract.address);
       await transmuterContract.connect(governance).setWhitelist(formation.address, true);
-      await token.mint(await minter.getAddress(), parseUnits("10000",6));
-      await token.connect(minter).approve(formation.address, parseUnits("10000",6));
+      
+      await token.mint(await minter.getAddress(), parseEther("10000"));
+      await token.connect(minter).approve(formation.address, parseEther("10000"));
     });
 
     describe("migrate", () => {
@@ -485,12 +486,8 @@ describe("Formation", () => {
         let controllerMock: YearnControllerMock;
         let vaultMock: YearnVaultMockUsd;
         let depositAmt = parseUnits("5000",6);
-        let mintAmt = parseUnits("1000",6);
+        let mintAmt = parseEther("1000");
         let recallAmt = parseUnits("500",6);
-
-        // let USDtest = parseUnits("500",6);
-        // console.log(recallAmt);
-        // console.log(USDtest);
 
         beforeEach(async () => {
           controllerMock = await YearnControllerMockFactory
@@ -502,14 +499,14 @@ describe("Formation", () => {
           adapter = await YearnVaultAdapterUsdFactory
             .connect(deployer)
             .deploy(vaultMock.address, formation.address) as YearnVaultAdapterUsd;
-          await token.mint(await deployer.getAddress(), parseUnits("10000",6));
-          await token.approve(vaultMock.address, parseUnits("10000",6));
+            
+          await token.mint(await deployer.getAddress(), parseEther("10000"));
+          await token.approve(vaultMock.address, parseEther("10000"));
           await formation.connect(governance).initialize(adapter.address)
           await formation.connect(minter).deposit(depositAmt);
           await formation.flush();
           // need at least one other deposit in the vault to not get underflow errors
-          await vaultMock.connect(deployer).deposit(parseUnits("100",6));
-          //console.log( await vaultMock.connect(deployer).totalSupply());//5100
+          await vaultMock.connect(deployer).deposit(parseUnits("100",6));//deposit 100USDT
           //console.log(await adapter.decimals());//18
         });
 
@@ -523,28 +520,28 @@ describe("Formation", () => {
           await formation.connect(governance).recall(0, recallAmt);
           let afterBal = await token.connect(governance).balanceOf(formation.address);
           expect(beforeBal).equal(0);
-          expect(afterBal).equal(recallAmt);
+          expect(afterBal).equal(recallAmt.mul(1000000000000));
         });
 
         it("governance can recall all of the funds", async () => {
           await formation.connect(governance).recallAll(0);
-          expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt);
+          expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt.mul(1000000000000));
         });
 
         describe("in an emergency", async () => {
           it("anyone can recall funds", async () => {
             await formation.connect(governance).setEmergencyExit(true);
             await formation.connect(minter).recallAll(0);
-            expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt);
+            expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt.mul(1000000000000));
           });
 
           it("after some usage", async () => {
-            await formation.connect(minter).deposit(mintAmt);
+            await formation.connect(minter).deposit(mintAmt.div(1000000000000));
             await formation.connect(governance).flush();
-            await token.mint(adapter.address, parseUnits("500",6));
+            await token.mint(adapter.address, parseEther("500"));
             await formation.connect(governance).setEmergencyExit(true);
             await formation.connect(minter).recallAll(0);
-            expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt.add(mintAmt));
+            expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt.mul(1000000000000).add(mintAmt));
           });
         })
       });
@@ -553,7 +550,7 @@ describe("Formation", () => {
         let inactiveAdapter: VaultAdapterMock;
         let activeAdapter: VaultAdapterMock;
         let depositAmt = parseUnits("5000",6);
-        let mintAmt = parseUnits("1000",6);
+        let mintAmt = parseEther("1000");
         let recallAmt = parseUnits("500",6);
 
         beforeEach(async () => {
@@ -562,7 +559,7 @@ describe("Formation", () => {
 
           await formation.connect(governance).initialize(inactiveAdapter.address);
           await token.mint(await minter.getAddress(), depositAmt);
-          await token.connect(minter).approve(formation.address, depositAmt);
+          await token.connect(minter).approve(formation.address, depositAmt.mul(1000000000000));
           await formation.connect(minter).deposit(depositAmt);
           await formation.connect(minter).flush();
           await formation.connect(governance).migrate(activeAdapter.address);
@@ -570,19 +567,19 @@ describe("Formation", () => {
 
         it("anyone can recall some of the funds to the contract", async () => {
           await formation.connect(minter).recall(0, recallAmt);
-          expect(await token.balanceOf(formation.address)).equal(recallAmt);
+          expect(await token.balanceOf(formation.address)).equal(recallAmt.mul(1000000000000));
         });
 
         it("anyone can recall all of the funds to the contract", async () => {
           await formation.connect(minter).recallAll(0);
-          expect(await token.balanceOf(formation.address)).equal(depositAmt);
+          expect(await token.balanceOf(formation.address)).equal(depositAmt.mul(1000000000000));
         });
 
         describe("in an emergency", async () => {
           it("anyone can recall funds", async () => {
             await formation.connect(governance).setEmergencyExit(true);
             await formation.connect(minter).recallAll(0);
-            expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt);
+            expect(await token.connect(governance).balanceOf(formation.address)).equal(depositAmt.mul(1000000000000));
           });
         })
       });
@@ -600,7 +597,7 @@ describe("Formation", () => {
       context("when there is at least one vault to flush to", () => {
         context("when there is one vault", () => {
           let adapter: VaultAdapterMock;
-          let mintAmount = parseUnits("5000",6);
+          let mintAmount = parseEther("5000");
 
           beforeEach(async () => {
             adapter = (await VaultAdapterMockFactory.connect(deployer).deploy(
@@ -624,7 +621,7 @@ describe("Formation", () => {
         context("when there are multiple vaults", () => {
           let inactiveAdapter: VaultAdapterMock;
           let activeAdapter: VaultAdapterMock;
-          let mintAmount = parseUnits("5000",6);
+          let mintAmount = parseEther("5000");
 
           beforeEach(async () => {
             inactiveAdapter = (await VaultAdapterMockFactory.connect(
@@ -658,10 +655,9 @@ describe("Formation", () => {
     describe("deposit and withdraw tokens", () => {
       let depositAmt = parseUnits("5000",6);
       let mintAmt = parseEther("1000");
-      let mintAmtUSD = parseUnits("1000",6);
-      let ceilingAmt = parseUnits("10000",6);
-      //let collateralizationLimit = "2000000000000000000"; // this should be set in the deploy sequence
-      let collateralizationLimit = "2000000";
+      let ceilingAmt = parseEther("10000");
+      let collateralizationLimit = "2000000000000000000"; // this should be set in the deploy sequence
+      let repayAmtUSD = mintAmt.div(1000000000000);
       beforeEach(async () => {
         adapter = (await VaultAdapterMockFactory.connect(deployer).deploy(
           token.address
@@ -672,20 +668,19 @@ describe("Formation", () => {
           .setCollateralizationLimit(collateralizationLimit);
         await nUsd.connect(deployer).setWhitelist(formation.address, true);
         await nUsd.connect(deployer).setCeiling(formation.address, ceilingAmt);
-        await token.mint(await minter.getAddress(), depositAmt);
-        await token.connect(minter).approve(formation.address, parseUnits("100000000",6));
-        await nUsd.connect(minter).approve(formation.address, parseUnits("100000000",6));
-    
+        await token.mint(await minter.getAddress(), parseEther("5000"));
+        await token.connect(minter).approve(formation.address, parseEther("100000000"));
+        await nUsd.connect(minter).approve(formation.address, parseEther("100000000"));
       });
 
       it("deposited amount is accounted for correctly", async () => {
         // let address = await deployer.getAddress();
-        await formation.connect(minter).deposit(depositAmt);
+         await formation.connect(minter).deposit(depositAmt);
         expect(
           await formation
             .connect(minter)
             .getCdpTotalDeposited(await minter.getAddress())
-        ).equal(depositAmt);
+        ).equal(depositAmt.mul(1000000000000));//to address decimal
       });
 
       it("deposits token and then withdraws all", async () => {
@@ -712,37 +707,37 @@ describe("Formation", () => {
         let balBefore = await token.balanceOf(await minter.getAddress());
         await formation.connect(minter).deposit(depositAmt);
         await formation.connect(minter).mint(mintAmt);
-        console.log(await formation.connect(minter).test1());
         await formation.connect(minter).repay(0, mintAmt);//repay with nUSD
-        await formation.connect(minter).withdraw(depositAmt);
+        await formation.connect(minter).withdraw(depositAmt);//withdraw with USDT
         let balAfter = await token.balanceOf(await minter.getAddress());
         expect(balBefore).equal(balAfter);
-      });
+       });
+//add by Leo
       it("deposits, mints, repays with USDT, and withdraws", async () => {
         let balBefore = await token.balanceOf(await minter.getAddress());
-        await formation.connect(minter).deposit(depositAmt);//5000*10^6
-        await formation.connect(minter).mint(mintAmt);//1000*10^18
-        await formation.connect(minter).repay(mintAmtUSD,0);//repay with USDT
+        await formation.connect(minter).deposit(depositAmt);
+        await formation.connect(minter).mint(mintAmt);
+        await formation.connect(minter).repay(repayAmtUSD,0);//repay with USDT
         await formation.connect(minter).withdraw(depositAmt);
         let balAfter = await token.balanceOf(await minter.getAddress());
-        expect(balBefore).equal(balAfter);
+        expect(balBefore).equal(balAfter.add(mintAmt));//!!!
       });
 
       it("deposits 5000 USDT, mints 1000 nUSD, and withdraws 3000 USDT", async () => {
-        let withdrawAmt = depositAmt.sub(mintAmtUSD.mul(2));
-        await formation.connect(minter).deposit(depositAmt);
-        await formation.connect(minter).mint(mintAmt);
+        let withdrawAmt = depositAmt.sub(mintAmt.div(1000000000000).mul(2));
+        await formation.connect(minter).deposit(depositAmt);  
+        await formation.connect(minter).mint(mintAmt);    
         await formation.connect(minter).withdraw(withdrawAmt);
         expect(await token.balanceOf(await minter.getAddress())).equal(
-          parseUnits("13000",6)
+          parseEther("13000")
         );
       });
 
       describe("flushActivator", async () => {
         beforeEach(async () => {
-          await token.connect(deployer).approve(formation.address, parseUnits("1",6));
-          await token.mint(await deployer.getAddress(), parseUnits("1",6));
-          await token.mint(await minter.getAddress(), parseUnits("100000",6));
+          await token.connect(deployer).approve(formation.address, parseEther("1"));
+          await token.mint(await deployer.getAddress(), parseEther("1"));
+          await token.mint(await minter.getAddress(), parseEther("100000"));
           await formation.connect(deployer).deposit(parseUnits("1",6));
         });
 
@@ -751,7 +746,7 @@ describe("Formation", () => {
           await formation.connect(minter).deposit(parseUnits("100000",6));
           let balAfterWhale = await token.balanceOf(adapter.address);
           expect(balBeforeWhale).equal(0);
-          expect(balAfterWhale).equal(parseUnits("100001",6));
+          expect(balAfterWhale).equal(parseEther("100001"));
         });
 
         it("deposit() does not flush funds if amount < flushActivator", async () => {
@@ -764,14 +759,13 @@ describe("Formation", () => {
       })
     });
 
-    describe("repay and liquidate tokens", () => {//!!!
+    describe("repay and liquidate tokens", () => {
       let depositAmt = parseUnits("5000",6);
-      //let mintAmt = parseUnits("1000",6);
       let mintAmt = parseEther("1000");
-      let mintAmtUSD = parseUnits("1000",6);
-      let ceilingAmt = parseUnits("10000",6);
-      //let collateralizationLimit = "2000000000000000000"; // this should be set in the deploy sequence
-      let collateralizationLimit = "2000000";
+      let ceilingAmt = parseEther("10000");
+      let collateralizationLimit = "2000000000000000000"; // this should be set in the deploy sequence
+      let repayAmtUSD = mintAmt.div(1000000000000);
+      //let collateralizationLimit = "2000000";
       beforeEach(async () => {
         adapter = (await VaultAdapterMockFactory.connect(deployer).deploy(
           token.address
@@ -784,13 +778,13 @@ describe("Formation", () => {
         await nUsd.connect(deployer).setCeiling(formation.address, ceilingAmt);
         await token.mint(await minter.getAddress(), ceilingAmt);
         await token.connect(minter).approve(formation.address, ceilingAmt);
-        await nUsd.connect(minter).approve(formation.address, parseUnits("100000000",6));
+        await nUsd.connect(minter).approve(formation.address, parseEther("100000000"));
         await token.connect(minter).approve(transmuterContract.address, ceilingAmt);
-        await nUsd.connect(minter).approve(transmuterContract.address, depositAmt);
+        await nUsd.connect(minter).approve(transmuterContract.address, depositAmt.mul(1000000000000));
       });
       it("repay with USDT reverts when nothing is minted and transmuter has no nUsd deposits", async () => {
         await formation.connect(minter).deposit(depositAmt.sub(parseUnits("1000",6)))
-        expect(formation.connect(minter).repay(mintAmtUSD, 0)).revertedWith("SafeMath: subtraction overflow")//repay with USDT
+        expect(formation.connect(minter).repay(repayAmtUSD, 0)).revertedWith("SafeMath: subtraction overflow")//repay with USDT
       })
       it("liquidate max amount possible if trying to liquidate too much", async () => {
         let liqAmt = depositAmt;
@@ -805,7 +799,7 @@ describe("Formation", () => {
         let liqAmt = parseUnits("600",6);
         await formation.connect(minter).deposit(depositAmt);
         await formation.connect(governance).flush();
-        await formation.connect(minter).deposit(mintAmt.div(2));
+        await formation.connect(minter).deposit(mintAmt.div(1000000000000).div(2));
         await formation.connect(minter).mint(mintAmt);
         await transmuterContract.connect(minter).stake(mintAmt);
         const formationTokenBalPre = await token.balanceOf(formation.address);
@@ -813,7 +807,7 @@ describe("Formation", () => {
         const formationTokenBalPost = await token.balanceOf(formation.address);
         const transmuterEndingTokenBal = await token.balanceOf(transmuterContract.address);
         expect(formationTokenBalPost).equal(0);
-        expect(transmuterEndingTokenBal).equal(liqAmt);
+        expect(transmuterEndingTokenBal).equal(liqAmt.mul(1000000000000));
       })
       it("liquidates the minimum necessary from the formation buffer", async () => {
         let dep2Amt = parseUnits("500",6);
@@ -821,21 +815,21 @@ describe("Formation", () => {
         await formation.connect(minter).deposit(parseUnits("2000",6));
         await formation.connect(governance).flush();
         await formation.connect(minter).deposit(dep2Amt);
-        await formation.connect(minter).mint(parseUnits("1000",6));
-        await transmuterContract.connect(minter).stake(parseUnits("1000",6));
+        await formation.connect(minter).mint(parseEther("1000"));
+        await transmuterContract.connect(minter).stake(parseEther("1000"));
         const formationTokenBalPre = await token.balanceOf(formation.address);
         await formation.connect(minter).liquidate(liqAmt);
         const formationTokenBalPost = await token.balanceOf(formation.address);
 
         const transmuterEndingTokenBal = await token.balanceOf(transmuterContract.address);
-        expect(formationTokenBalPost).equal(dep2Amt.sub(liqAmt));
-        expect(transmuterEndingTokenBal).equal(liqAmt);
+        expect(formationTokenBalPost).equal(dep2Amt.sub(liqAmt).mul(1000000000000));
+        expect(transmuterEndingTokenBal).equal(liqAmt.mul(1000000000000));
       })
       it("deposits, mints nUsd, repays, and has no outstanding debt", async () => {
         await formation.connect(minter).deposit(depositAmt.sub(parseUnits("1000",6)));
         await formation.connect(minter).mint(mintAmt);
         await transmuterContract.connect(minter).stake(mintAmt);
-        await formation.connect(minter).repay(mintAmt, 0);//repay with USDT
+        await formation.connect(minter).repay(repayAmtUSD, 0);//repay with USDT
         expect(await formation.connect(minter).getCdpTotalDebt(await minter.getAddress())).equal(0)
       })
       it("deposits, mints, repays, and has no outstanding debt", async () => {
@@ -851,8 +845,8 @@ describe("Formation", () => {
       it("deposits, mints nUsd, repays with nUsd and DAI, and has no outstanding debt", async () => {
         await formation.connect(minter).deposit(depositAmt.sub(parseUnits("1000",6)));
         await formation.connect(minter).mint(mintAmt);
-        await transmuterContract.connect(minter).stake(parseUnits("500",6));
-        await formation.connect(minter).repay(parseUnits("500",6), parseUnits("500",6));//repay both USDT and nUSD
+        await transmuterContract.connect(minter).stake(parseEther("500"));
+        await formation.connect(minter).repay(parseUnits("500",6), parseEther("500"));//repay both USDT and nUSD
         expect(await formation.connect(minter).getCdpTotalDebt(await minter.getAddress())).equal(0)
       })
 
@@ -860,16 +854,15 @@ describe("Formation", () => {
         await formation.connect(minter).deposit(depositAmt);
         await formation.connect(minter).mint(mintAmt);
         await transmuterContract.connect(minter).stake(mintAmt);
-        await formation.connect(minter).liquidate(mintAmt);
-        expect( await formation.connect(minter).getCdpTotalDeposited(await minter.getAddress())).equal(depositAmt.sub(mintAmt))
+        await formation.connect(minter).liquidate(mintAmt.div(1000000000000));
+        expect( await formation.connect(minter).getCdpTotalDeposited(await minter.getAddress())).equal(depositAmt.mul(1000000000000).sub(mintAmt))
       });
     });
 
     describe("mint", () => {
       let depositAmt = parseUnits("5000",6);
-      //let mintAmt = parseUnits("1000",6);
       let mintAmt = parseEther("1000");
-      let ceilingAmt = parseUnits("1000",6);
+      let ceilingAmt = parseEther("1000");
 
       beforeEach(async () => {
         adapter = (await VaultAdapterMockFactory.connect(deployer).deploy(
@@ -879,8 +872,8 @@ describe("Formation", () => {
         await formation.connect(governance).initialize(adapter.address);
 
         await nUsd.connect(deployer).setCeiling(formation.address, ceilingAmt);
-        await token.mint(await minter.getAddress(), depositAmt);
-        await token.connect(minter).approve(formation.address, depositAmt);
+        await token.mint(await minter.getAddress(), depositAmt.mul(1000000000000));
+        await token.connect(minter).approve(formation.address, depositAmt.mul(1000000000000));
       });
 
       it("reverts if the Formation is not whitelisted", async () => {
@@ -905,13 +898,13 @@ describe("Formation", () => {
         });
   
         it("reverts when trying to mint too much", async () => {
-          expect(formation.connect(minter).mint(parseUnits("2000",6))).revertedWith(
+          expect(formation.connect(minter).mint(parseEther("2000"))).revertedWith(
             "Loan-to-value ratio breached"
           );
         });
   
         it("reverts if the ceiling was breached", async () => {
-          let lowCeilingAmt = parseUnits("100",6);
+          let lowCeilingAmt = parseEther("100");
           await nUsd
             .connect(deployer)
             .setCeiling(formation.address, lowCeilingAmt);
@@ -927,15 +920,15 @@ describe("Formation", () => {
           await formation.connect(minter).mint(mintAmt);
           let balAfter = await token.balanceOf(await minter.getAddress());
   
-          expect(balAfter).equal(balBefore.sub(depositAmt));
+          expect(balAfter).equal(balBefore.sub(depositAmt.mul(1000000000000)));
           expect(await nUsd.balanceOf(await minter.getAddress())).equal(mintAmt);
         });
   
         describe("flushActivator", async () => {
           beforeEach(async () => {
-            await nUsd.connect(deployer).setCeiling(formation.address, parseUnits("200000",6));
-            await token.mint(await minter.getAddress(), parseUnits("200000",6));
-            await token.connect(minter).approve(formation.address, parseUnits("200000",6));
+            await nUsd.connect(deployer).setCeiling(formation.address, parseEther("200000"));
+            await token.mint(await minter.getAddress(), parseEther("200000"));
+            await token.connect(minter).approve(formation.address, parseEther("200000"));
           });
   
           it("mint() flushes funds if amount >= flushActivator", async () => {
@@ -944,10 +937,10 @@ describe("Formation", () => {
             await formation.connect(minter).deposit(parseUnits("50000",6));
             await formation.connect(minter).deposit(parseUnits("50000",6));
             let balBeforeWhale = await token.balanceOf(adapter.address);
-            await formation.connect(minter).mint(parseUnits("100000",6));
+            await formation.connect(minter).mint(parseEther("100000"));
             let balAfterWhale = await token.balanceOf(adapter.address);
             expect(balBeforeWhale).equal(0);
-            expect(balAfterWhale).equal(parseUnits("200000",6));
+            expect(balAfterWhale).equal(parseEther("200000"));
           });
 
           it("mint() does not flush funds if amount < flushActivator", async () => {
@@ -956,7 +949,7 @@ describe("Formation", () => {
             await formation.connect(minter).deposit(parseUnits("50000",6));
             await formation.connect(minter).deposit(parseUnits("50000",6));
             let balBeforeWhale = await token.balanceOf(adapter.address);
-            await formation.connect(minter).mint(parseUnits("99999",6));
+            await formation.connect(minter).mint(parseEther("99999"));
             let balAfterWhale = await token.balanceOf(adapter.address);
             expect(balBeforeWhale).equal(0);
             expect(balAfterWhale).equal(0);
@@ -967,11 +960,10 @@ describe("Formation", () => {
 
     describe("harvest", () => {
       let depositAmt = parseUnits("5000",6);
-      //let mintAmt = parseUnits("1000",6);
       let mintAmt = parseEther("1000");
       let stakeAmt = mintAmt.div(2);
-      let ceilingAmt = parseUnits("10000",6);
-      let yieldAmt = parseUnits("100",6);
+      let ceilingAmt = parseEther("10000");
+      let yieldAmt = parseEther("100");
 
       beforeEach(async () => {
         adapter = (await VaultAdapterMockFactory.connect(deployer).deploy(
@@ -981,9 +973,9 @@ describe("Formation", () => {
         await nUsd.connect(deployer).setWhitelist(formation.address, true);
         await formation.connect(governance).initialize(adapter.address);
         await nUsd.connect(deployer).setCeiling(formation.address, ceilingAmt);
-        await token.mint(await user.getAddress(), depositAmt);
-        await token.connect(user).approve(formation.address, depositAmt);
-        await nUsd.connect(user).approve(transmuterContract.address, depositAmt);
+        await token.mint(await user.getAddress(), depositAmt.mul(1000000000000));
+        await token.connect(user).approve(formation.address, depositAmt.mul(1000000000000));
+        await nUsd.connect(user).approve(transmuterContract.address, depositAmt.mul(1000000000000));
         await formation.connect(user).deposit(depositAmt);
         await formation.connect(user).mint(mintAmt);
         await transmuterContract.connect(user).stake(stakeAmt);
@@ -996,7 +988,7 @@ describe("Formation", () => {
         let transmuterBal = await token.balanceOf(transmuterContract.address);
         expect(transmuterBal).equal(yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)));
         let vaultBal = await token.balanceOf(adapter.address);
-        expect(vaultBal).equal(depositAmt);
+        expect(vaultBal).equal(depositAmt.mul(1000000000000));
       })
 
       it("sends the harvest fee to the rewards address", async () => {
