@@ -9,7 +9,7 @@ import { StakingPools } from "../../types/StakingPools";
 import { NToken } from "../../types/NToken";
 import { Erc20MockUsd } from "../../types/Erc20MockUsd";
 import { MAXIMUM_U256, ZERO_ADDRESS, DEFAULT_FLUSH_ACTIVATOR } from "../utils/helpers";
-import { VaultAdapterMock } from "../../types/VaultAdapterMock";
+//import { VaultAdapterMock } from "../../types/VaultAdapterMock";
 import { YearnVaultAdapterUsd } from "../../types/YearnVaultAdapterUsd";
 import { YearnVaultMockUsd } from "../../types/YearnVaultMockUsd";
 import { YearnControllerMock } from "../../types/YearnControllerMock";
