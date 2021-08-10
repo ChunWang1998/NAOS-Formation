@@ -187,6 +187,7 @@ uint256 public test1;
   /// @dev The maximum update time of oracle (seconds)
   uint256 public oracleUpdateDelay;
   
+  uint256 public USDT_CONST = 1000000000000;
   constructor(
     IMintableERC20 _token,
     IMintableERC20 _xtoken,
@@ -381,18 +382,16 @@ uint256 public test1;
   ///
   /// @return the amount of funds that were harvested from the vault.
   function harvest(uint256 _vaultId) external expectInitialized returns (uint256, uint256) {
-
     Vault.Data storage _vault = _vaults.get(_vaultId);
-
     (uint256 _harvestedAmount, uint256 _decreasedValue) = _vault.harvest(address(this));
-
+// console.log(_harvestedAmount);//formation harvest後收到的錢
+// console.log(_decreasedValue);//vault harvest後減少的錢
     if (_harvestedAmount > 0) {
       uint256 _feeAmount = _harvestedAmount.mul(harvestFee).div(PERCENT_RESOLUTION);
       uint256 _distributeAmount = _harvestedAmount.sub(_feeAmount);
-
       FixedPointMath.uq192x64 memory _weight = FixedPointMath.fromU256(_distributeAmount).div(totalDeposited);
       _ctx.accumulatedYieldWeight = _ctx.accumulatedYieldWeight.add(_weight);
-
+  //利息分配比率：harvestFee/PERCENT_RESOLUTION, 分配給rewards 和transmuter
       if (_feeAmount > 0) {
         token.safeTransfer(rewards, _feeAmount);
       }
@@ -413,9 +412,9 @@ uint256 public test1;
   ///
   /// @return the amount of funds that were recalled from the vault to this contract and the decreased vault value.
   function recall(uint256 _vaultId, uint256 _amount) external nonReentrant expectInitialized returns (uint256, uint256) {
-
-    //return _recallFunds(_vaultId, _amount);
-    return _recallFundsUSD(_vaultId, _amount);
+    _amount = _amount.mul(USDT_CONST);
+    return _recallFunds(_vaultId, _amount);
+    
   }
 
   /// @dev Recalls all the deposited funds from a vault to this contract.
@@ -444,16 +443,16 @@ uint256 public test1;
   /// additional funds.
   ///
   /// @return the amount of tokens flushed to the active vault.
-    //把錢丟到vault
+    //把錢從formation丟到vault
   function flushActiveVault() internal returns (uint256) {
 
     // Prevent flushing to the active vault when an emergency exit is enabled to prevent potential loss of funds if
     // the active vault is poisoned for any reason.
     require(!emergencyExit, "emergency pause enabled");
-
     Vault.Data storage _activeVault = _vaults.last();
-    uint256 _depositedAmount = _activeVault.depositAll();
-
+   
+    
+    uint256 _depositedAmount = _activeVault.depositAll();//把錢丟到vault
     emit FundsFlushed(_depositedAmount);
 
     return _depositedAmount;
@@ -466,7 +465,7 @@ uint256 public test1;
   ///
   /// @param _amount the amount of collateral to deposit.
   function deposit(uint256 _amount) external nonReentrant noContractAllowed expectInitialized {
-    _amount = _amount.mul(1000000000000);
+    _amount = _amount.mul(USDT_CONST);
 
     require(!emergencyExit, "emergency pause enabled");
     
@@ -493,7 +492,7 @@ uint256 public test1;
   ///
   /// @param _amount the amount of collateral to withdraw.
   function withdraw(uint256 _amount) external nonReentrant noContractAllowed expectInitialized returns (uint256, uint256) {
-    _amount = _amount.mul(1000000000000);
+    _amount = _amount.mul(USDT_CONST);
     CDP.Data storage _cdp = _cdps[msg.sender];
     require(block.number > _cdp.lastDeposit, "");
 
@@ -516,7 +515,7 @@ uint256 public test1;
 
     CDP.Data storage _cdp = _cdps[msg.sender];
     _cdp.update(_ctx);
-    _parentAmount = _parentAmount.mul(1000000000000);
+    _parentAmount = _parentAmount.mul(USDT_CONST);
 //USDT
     if (_parentAmount > 0) {
       token.safeTransferFrom(msg.sender, address(this), _parentAmount);
@@ -541,7 +540,7 @@ uint256 public test1;
   function liquidate(uint256 _amount) external nonReentrant noContractAllowed onLinkCheck expectInitialized returns (uint256, uint256) {
     CDP.Data storage _cdp = _cdps[msg.sender];
     _cdp.update(_ctx);
-    _amount = _amount.mul(1000000000000);
+    _amount = _amount.mul(USDT_CONST);
     // don't attempt to liquidate more than is possible
     if(_amount > _cdp.totalDebt){
       _amount = _cdp.totalDebt;
@@ -576,19 +575,17 @@ uint256 public test1;
       uint256 _remainingAmount = _amount.sub(_totalCredit);
       _cdp.totalDebt = _cdp.totalDebt.add(_remainingAmount);
       _cdp.totalCredit = 0;
-      _cdp.checkHealth(_ctx, "Formation: Loan-to-value ratio breached");
+      _cdp.checkHealth(_ctx, "Formation: Loan-to-value ratio breached");//算抵押率是否符合200%
     } else {
       _cdp.totalCredit = _totalCredit.sub(_amount);
     }
 
-   
     xtoken.mint(msg.sender, _amount);
-    //xtoken.mint(msg.sender, xtoken_mint_amt);
     if(_amount >= flushActivator) {
       flushActiveVault();
     }
   }
-
+ 
   /// @dev Gets the number of vaults in the vault list.
   ///
   /// @return the vault count.
@@ -740,17 +737,6 @@ uint256 public test1;
     return (_withdrawnAmount, _decreasedValue);
   }
 
-   function _recallFundsUSD(uint256 _vaultId, uint256 _amount) internal returns (uint256, uint256) {
-    _amount = _amount.mul(1000000000000);
-    require(emergencyExit || msg.sender == governance || _vaultId != _vaults.lastIndex(), "Formation: not an emergency, not governance, and user does not have permission to recall funds from active vault");
-
-    Vault.Data storage _vault = _vaults.get(_vaultId);
-    (uint256 _withdrawnAmount, uint256 _decreasedValue) = _vault.withdraw(address(this), _amount);
-
-    emit FundsRecalled(_vaultId, _withdrawnAmount, _decreasedValue);
-
-    return (_withdrawnAmount, _decreasedValue);
-  }
 
   /// @dev Attempts to withdraw funds from the active vault to the recipient.
   ///
