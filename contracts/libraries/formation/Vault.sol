@@ -73,7 +73,7 @@ library Vault {
   /// @dev Directly withdraw deposited funds from the vault.
   ///
   /// @param _recipient the account to withdraw the tokens to.
-  /// @param _amount    the amount of tokens to withdraw.
+  /// @param _amount    the amount of tokens to withdraw.(decimal:18)
   function directWithdraw(Data storage _self, address _recipient, uint256 _amount) internal returns (uint256, uint256) {
     IDetailedERC20 _token = _self.token();
 
@@ -102,6 +102,8 @@ library Vault {
   ///
   /// @param _recipient the account to withdraw the harvested yield to.
   function harvest(Data storage _self, address _recipient) internal returns (uint256, uint256) {
+    // console.log(_self.totalValue());//Gets the total value of the assets that the adapter holds in the vault(adapter 的錢).
+    // console.log(_self.totalDeposited);//在flush 時從formation丟到vault的總額
     if (_self.totalValue() <= _self.totalDeposited) {
       return (0, 0);
     }

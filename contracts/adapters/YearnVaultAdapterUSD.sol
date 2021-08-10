@@ -34,7 +34,7 @@ contract YearnVaultAdapterUSD is IVaultAdapter {
     vault = _vault;
     admin = _admin;
     updateApproval();
-    decimals = _vault.decimals();//import erc20USD-> 6
+    decimals = 6;//_vault.decimals();//import erc20USD-> 6
   }
 
   /// @dev A modifier which reverts if the caller is not the admin.
@@ -71,7 +71,7 @@ contract YearnVaultAdapterUSD is IVaultAdapter {
   /// This function reverts if the caller is not the admin.
   ///
   /// @param _recipient the account to withdraw the tokes to.
-  /// @param _amount    the amount of tokens to withdraw.
+  /// @param _amount    the amount of tokens to withdraw.(decimal:18)
   function withdraw(address _recipient, uint256 _amount) external override onlyAdmin {
     vault.withdraw(_tokensToShares(_amount),_recipient);
   }

@@ -4,14 +4,14 @@ pragma solidity 0.6.12;
 import "hardhat/console.sol";
 
 import "@openzeppelin/contracts/math/SafeMath.sol";
-import "@openzeppelin/contracts/token/ERC20/ERC20USD.sol";
+import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 
 import "../interfaces/IYearnController.sol";
-import "../interfaces/IYearnVaultUSD.sol";
+import "../interfaces/IYearnVault.sol";
 
-contract YearnVaultMockUSD is  ERC20USD {
+contract YearnVaultMockUSD is  ERC20 {
   using SafeERC20 for IDetailedERC20;
   using SafeMath for uint256;
 
@@ -21,7 +21,7 @@ contract YearnVaultMockUSD is  ERC20USD {
   IYearnController public controller;
   IDetailedERC20 public token;
 
-  constructor(IDetailedERC20 _token, IYearnController _controller) public ERC20USD("yEarn Mock", "yMOCK") {
+  constructor(IDetailedERC20 _token, IYearnController _controller) public ERC20("yEarn Mock", "yMOCK") {
     token = _token;
     controller = _controller;
   }
@@ -45,6 +45,8 @@ contract YearnVaultMockUSD is  ERC20USD {
   }
 
   function deposit(uint256 _amount) external returns (uint){
+    console.log("depsoit: into yearnvaultmockUSD!");
+    console.log(_amount);
     uint _pool = balance();
     uint _before = token.balanceOf(address(this));
     token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -60,6 +62,8 @@ contract YearnVaultMockUSD is  ERC20USD {
   }
 
   function withdraw(uint _shares, address _recipient) external returns (uint) {
+    console.log("withdraw: into yearnvaultmockUSD!");
+    console.log(_shares);
     uint _r = (balance().mul(_shares)).div(totalSupply());
     _burn(msg.sender, _shares);
 
