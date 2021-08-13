@@ -627,16 +627,13 @@ describe("Formation", () => {
             activeAdapter = (await VaultAdapterMockFactory.connect(
               deployer
             ).deploy(token.address)) as VaultAdapterMock;
-
             await token.mint(formation.address, mintAmount);
-
             await formation
               .connect(governance)
               .initialize(inactiveAdapter.address);
-
             await formation.connect(governance).migrate(activeAdapter.address);
-
             await formation.flush();
+
           });
 
           it("flushes funds to the active vault", async () => {

@@ -382,7 +382,8 @@ contract Formation is  ReentrancyGuard {
     Vault.Data storage _vault = _vaults.get(_vaultId);
 
     (uint256 _harvestedAmount, uint256 _decreasedValue) = _vault.harvest(address(this));
-
+// console.log(_harvestedAmount);//formation harvest後收到的錢
+// console.log(_decreasedValue);//vault harvest後減少的錢
     if (_harvestedAmount > 0) {
       uint256 _feeAmount = _harvestedAmount.mul(harvestFee).div(PERCENT_RESOLUTION);
       uint256 _distributeAmount = _harvestedAmount.sub(_feeAmount);

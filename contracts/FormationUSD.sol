@@ -384,8 +384,8 @@ uint256 public test1;
   function harvest(uint256 _vaultId) external expectInitialized returns (uint256, uint256) {
     Vault.Data storage _vault = _vaults.get(_vaultId);
     (uint256 _harvestedAmount, uint256 _decreasedValue) = _vault.harvest(address(this));
-// console.log(_harvestedAmount);//formation harvest後收到的錢
-// console.log(_decreasedValue);//vault harvest後減少的錢
+//  console.log(_harvestedAmount);//formation harvest後收到的錢
+//  console.log(_decreasedValue);//vault harvest後減少的錢
     if (_harvestedAmount > 0) {
       uint256 _feeAmount = _harvestedAmount.mul(harvestFee).div(PERCENT_RESOLUTION);
       uint256 _distributeAmount = _harvestedAmount.sub(_feeAmount);
@@ -417,15 +417,16 @@ uint256 public test1;
     
   }
 
+//delete this function since it doesn't work
   /// @dev Recalls all the deposited funds from a vault to this contract.
   ///
   /// @param _vaultId the identifier of the recall funds from.
   ///
   /// @return the amount of funds that were recalled from the vault to this contract and the decreased vault value.
-  function recallAll(uint256 _vaultId) external nonReentrant expectInitialized returns (uint256, uint256) {
-    Vault.Data storage _vault = _vaults.get(_vaultId);
-    return _recallFunds(_vaultId, _vault.totalDeposited);
-  }
+  // function recallAll(uint256 _vaultId) external nonReentrant expectInitialized returns (uint256, uint256) {
+  //   Vault.Data storage _vault = _vaults.get(_vaultId);
+  //   return _recallFunds(_vaultId, _vault.totalDeposited);
+  // }
 
   /// @dev Flushes buffered tokens to the active vault.
   ///
@@ -495,16 +496,15 @@ uint256 public test1;
     _amount = _amount.mul(USDT_CONST);
     CDP.Data storage _cdp = _cdps[msg.sender];
     require(block.number > _cdp.lastDeposit, "");
-
+ 
     _cdp.update(_ctx);
-
     (uint256 _withdrawnAmount, uint256 _decreasedValue) = _withdrawFundsTo(msg.sender, _amount);
+   
     _cdp.totalDeposited = _cdp.totalDeposited.sub(_decreasedValue, "Exceeds withdrawable amount");
-    
+  
     _cdp.checkHealth(_ctx, "Action blocked: unhealthy collateralization ratio");
 
     emit TokensWithdrawn(msg.sender, _amount, _withdrawnAmount, _decreasedValue);
-
     return (_withdrawnAmount, _decreasedValue);
   }
 
@@ -760,15 +760,13 @@ uint256 public test1;
     uint256 _totalDecreasedValue = _bufferedAmount;
 
     uint256 _remainingAmount = _amount.sub(_bufferedAmount);
-
     // Pull the remaining funds from the active vault.
     if (_remainingAmount > 0) {
       Vault.Data storage _activeVault = _vaults.last();
-      (uint256 _withdrawAmount, uint256 _decreasedValue) = _activeVault.withdraw(
+      (uint256 _withdrawAmount, uint256 _decreasedValue) =_activeVault.withdraw(
         _recipient,
         _remainingAmount
       );
-
       _totalWithdrawn = _totalWithdrawn.add(_withdrawAmount);
       _totalDecreasedValue = _totalDecreasedValue.add(_decreasedValue);
     }

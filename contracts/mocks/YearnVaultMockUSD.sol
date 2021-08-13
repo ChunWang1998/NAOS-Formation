@@ -24,12 +24,16 @@ contract YearnVaultMockUSD is  ERC20 {
   constructor(IDetailedERC20 _token, IYearnController _controller) public ERC20("yEarn Mock", "yMOCK") {
     token = _token;
     controller = _controller;
+    //_decimals = 6;
   }
 
   function vdecimals() external view returns (uint8) {
     return decimals();
   }
-
+  //override erc20 decimals
+function decimals() public view virtual override returns (uint8) {
+        return 6;
+    }
   function balance() public view  returns (uint256) {
     return token.balanceOf(address(this)).add(controller.balanceOf(address(token)));
   }
@@ -45,8 +49,6 @@ contract YearnVaultMockUSD is  ERC20 {
   }
 
   function deposit(uint256 _amount) external returns (uint){
-    console.log("depsoit: into yearnvaultmockUSD!");
-    console.log(_amount);
     uint _pool = balance();
     uint _before = token.balanceOf(address(this));
     token.safeTransferFrom(msg.sender, address(this), _amount);
@@ -62,8 +64,6 @@ contract YearnVaultMockUSD is  ERC20 {
   }
 
   function withdraw(uint _shares, address _recipient) external returns (uint) {
-    console.log("withdraw: into yearnvaultmockUSD!");
-    console.log(_shares);
     uint _r = (balance().mul(_shares)).div(totalSupply());
     _burn(msg.sender, _shares);
 
@@ -83,7 +83,8 @@ contract YearnVaultMockUSD is  ERC20 {
   }
 
   function pricePerShare() external view returns (uint256) {
-    return balance().mul(1e6).div(totalSupply());
+     //return balance().mul(1e6 ).div(totalSupply());
+    return balance().mul(uint(10)**decimals()).div(totalSupply());
   }// changed to v2
 
   /// @dev This is not part of the vault contract and is meant for quick debugging contracts to have control over

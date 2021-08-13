@@ -122,6 +122,7 @@ library CDP {
     returns (FixedPointMath.uq192x64 memory)
   {
     uint256 _totalDebt = _self.getUpdatedTotalDebt(_ctx);
+     
     if (_totalDebt == 0) {
       return FixedPointMath.maximumValue();
     }

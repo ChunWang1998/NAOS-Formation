@@ -76,12 +76,12 @@ library Vault {
   /// @param _amount    the amount of tokens to withdraw.(decimal:18)
   function directWithdraw(Data storage _self, address _recipient, uint256 _amount) internal returns (uint256, uint256) {
     IDetailedERC20 _token = _self.token();
-
+ 
     uint256 _startingBalance = _token.balanceOf(_recipient);
+    
     uint256 _startingTotalValue = _self.totalValue();
-
+   
     _self.adapter.withdraw(_recipient, _amount);
-
     uint256 _endingBalance = _token.balanceOf(_recipient);
     uint256 _withdrawnAmount = _endingBalance.sub(_startingBalance);
 
