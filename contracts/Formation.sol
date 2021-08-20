@@ -382,8 +382,6 @@ contract Formation is  ReentrancyGuard {
     Vault.Data storage _vault = _vaults.get(_vaultId);
 
     (uint256 _harvestedAmount, uint256 _decreasedValue) = _vault.harvest(address(this));
-// console.log(_harvestedAmount);//formation harvest後收到的錢
-// console.log(_decreasedValue);//vault harvest後減少的錢
     if (_harvestedAmount > 0) {
       uint256 _feeAmount = _harvestedAmount.mul(harvestFee).div(PERCENT_RESOLUTION);
       uint256 _distributeAmount = _harvestedAmount.sub(_feeAmount);
@@ -540,7 +538,6 @@ contract Formation is  ReentrancyGuard {
     (uint256 _withdrawnAmount, uint256 _decreasedValue) = _withdrawFundsTo(address(this), _amount);
     //changed to new transmuter compatibillity 
     _distributeToTransmuter(_withdrawnAmount);
-
     _cdp.totalDeposited = _cdp.totalDeposited.sub(_decreasedValue, "");
     _cdp.totalDebt = _cdp.totalDebt.sub(_withdrawnAmount, "");
     emit TokensLiquidated(msg.sender, _amount, _withdrawnAmount, _decreasedValue);
@@ -748,7 +745,6 @@ contract Formation is  ReentrancyGuard {
     uint256 _totalDecreasedValue = _bufferedAmount;
 
     uint256 _remainingAmount = _amount.sub(_bufferedAmount);
-
     // Pull the remaining funds from the active vault.
     if (_remainingAmount > 0) {
       Vault.Data storage _activeVault = _vaults.last();
@@ -756,7 +752,6 @@ contract Formation is  ReentrancyGuard {
         _recipient,
         _remainingAmount
       );
-
       _totalWithdrawn = _totalWithdrawn.add(_withdrawAmount);
       _totalDecreasedValue = _totalDecreasedValue.add(_decreasedValue);
     }

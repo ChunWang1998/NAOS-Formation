@@ -24,13 +24,12 @@ contract YearnVaultMockUSD is  ERC20 {
   constructor(IDetailedERC20 _token, IYearnController _controller) public ERC20("yEarn Mock", "yMOCK") {
     token = _token;
     controller = _controller;
-    //_decimals = 6;
   }
 
   function vdecimals() external view returns (uint8) {
     return decimals();
   }
-  //override erc20 decimals
+
 function decimals() public view virtual override returns (uint8) {
         return 6;
     }
@@ -83,7 +82,6 @@ function decimals() public view virtual override returns (uint8) {
   }
 
   function pricePerShare() external view returns (uint256) {
-     //return balance().mul(1e6 ).div(totalSupply());
     return balance().mul(uint(10)**decimals()).div(totalSupply());
   }// changed to v2
 

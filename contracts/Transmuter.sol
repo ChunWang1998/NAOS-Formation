@@ -5,12 +5,13 @@ import "@openzeppelin/contracts/token/ERC20/SafeERC20.sol";
 import "@openzeppelin/contracts/math/SafeMath.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IERC20Burnable.sol";
-
+import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import "hardhat/console.sol";
 
 contract Transmuter is Context {
     using SafeMath for uint256;
     using SafeERC20 for IERC20Burnable;
+    using SafeERC20 for IMintableERC20;
     using Address for address;
 
     address public constant ZERO_ADDRESS = address(0);
@@ -37,6 +38,8 @@ contract Transmuter is Context {
 
     uint256 public totalDividendPoints;
     uint256 public unclaimedDividends;
+
+    uint256 public USDT_CONST;
 
     /// @dev formation addresses whitelisted
     mapping (address => bool) public whiteList;
@@ -66,6 +69,12 @@ contract Transmuter is Context {
         governance = _governance;
         NToken = _NToken;
         Token = _Token;
+        if(IMintableERC20(_Token).decimals() == 6){
+            USDT_CONST = 1000000000000;
+        }
+        if(IMintableERC20(_Token).decimals()==18){
+            USDT_CONST = 1;
+        }
         TRANSMUTATION_PERIOD = 50;
     }
 
@@ -194,7 +203,6 @@ contract Transmuter is Context {
         updateAccount(msg.sender)
         checkIfNewUser()
     {
-        
         // requires approval of NToken first
         address sender = msg.sender;
         //require tokens transferred in;
@@ -330,7 +338,7 @@ contract Transmuter is Context {
     /// @param origin the account that is sending the tokens to be distributed.
     /// @param amount the amount of base tokens to be distributed to the transmuter.
     function distribute(address origin, uint256 amount) public onlyWhitelisted() runPhasedDistribution() {
-        IERC20Burnable(Token).safeTransferFrom(origin, address(this), amount);
+        IERC20Burnable(Token).safeTransferFrom(origin, address(this), amount.div(USDT_CONST));
         buffer = buffer.add(amount);
     }
 

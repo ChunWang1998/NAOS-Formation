@@ -19,5 +19,5 @@ contract ERC20MockUSD is ERC20 {
   function burn(address _account, uint256 _amount) external {
     _burn(_account, _amount);
   }
-
+  
 }

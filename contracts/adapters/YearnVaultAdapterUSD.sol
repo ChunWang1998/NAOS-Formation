@@ -71,11 +71,8 @@ contract YearnVaultAdapterUSD is IVaultAdapter {
   /// This function reverts if the caller is not the admin.
   ///
   /// @param _recipient the account to withdraw the tokes to.
-  /// @param _amount    the amount of tokens to withdraw.(decimal:18)
+  /// @param _amount    the amount of tokens to withdraw.
   function withdraw(address _recipient, uint256 _amount) external override onlyAdmin {
-    // console.log("tokenstoshares");
-    // console.log(_tokensToShares(_amount));
-    //vault.withdraw(_tokensToShares(_amount)+1,_recipient);
     vault.withdraw(_tokensToShares(_amount),_recipient);
   }
 
@@ -92,7 +89,7 @@ contract YearnVaultAdapterUSD is IVaultAdapter {
   /// @return the number of tokens the shares are worth.
   
   function _sharesToTokens(uint256 _sharesAmount) internal view returns (uint256) {
-    return _sharesAmount.mul(vault.pricePerShare()).div(10**decimals);//err
+    return _sharesAmount.mul(vault.pricePerShare()).div(10**decimals);
   }
 
   /// @dev Computes the number of shares an amount of tokens is worth.
@@ -101,7 +98,6 @@ contract YearnVaultAdapterUSD is IVaultAdapter {
   ///
   /// @return the number of shares the tokens are worth.
   function _tokensToShares(uint256 _tokensAmount) internal view returns (uint256) {
-    //price per share: 51/50
     return _tokensAmount.mul(10**decimals).div(vault.pricePerShare());
   }
 }

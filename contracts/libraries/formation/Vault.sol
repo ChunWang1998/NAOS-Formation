@@ -64,9 +64,17 @@ library Vault {
   ///
   /// @param _recipient the account to withdraw the tokens to.
   /// @param _amount    the amount of tokens to withdraw.
+  /*
+  _amount:18
+  */
   function withdraw(Data storage _self, address _recipient, uint256 _amount) internal returns (uint256, uint256) {
     (uint256 _withdrawnAmount, uint256 _decreasedValue) = _self.directWithdraw(_recipient, _amount);
-    _self.totalDeposited = _self.totalDeposited.sub(_decreasedValue);
+
+    IDetailedERC20 _token = _self.token();
+
+    uint256 USDT_CONST = (_token.decimals()==6)?1000000000000:1;
+
+    _self.totalDeposited = _self.totalDeposited.mul(USDT_CONST).sub(_decreasedValue);
     return (_withdrawnAmount, _decreasedValue);
   }
 
@@ -74,18 +82,24 @@ library Vault {
   ///
   /// @param _recipient the account to withdraw the tokens to.
   /// @param _amount    the amount of tokens to withdraw.(decimal:18)
+  /*
+  _amount:18
+  _token.balanceOf(_recipient):6
+  _self.totalValue():6
+  */
   function directWithdraw(Data storage _self, address _recipient, uint256 _amount) internal returns (uint256, uint256) {
     IDetailedERC20 _token = _self.token();
- 
-    uint256 _startingBalance = _token.balanceOf(_recipient);
+
+    uint256 USDT_CONST = (_token.decimals()==6)?1000000000000:1;
+    uint256 _startingBalance = _token.balanceOf(_recipient).mul(USDT_CONST);
     
-    uint256 _startingTotalValue = _self.totalValue();
-   
-    _self.adapter.withdraw(_recipient, _amount);
-    uint256 _endingBalance = _token.balanceOf(_recipient);
+    uint256 _startingTotalValue = _self.totalValue().mul(USDT_CONST);
+
+    _self.adapter.withdraw(_recipient, _amount.div(USDT_CONST));
+    uint256 _endingBalance = _token.balanceOf(_recipient).mul(USDT_CONST);
     uint256 _withdrawnAmount = _endingBalance.sub(_startingBalance);
 
-    uint256 _endingTotalValue = _self.totalValue();
+    uint256 _endingTotalValue = _self.totalValue().mul(USDT_CONST);
     uint256 _decreasedValue = _startingTotalValue.sub(_endingTotalValue);
 
     return (_withdrawnAmount, _decreasedValue);
@@ -101,14 +115,19 @@ library Vault {
   /// @dev Harvests yield from the vault.
   ///
   /// @param _recipient the account to withdraw the harvested yield to.
+  /*
+  _self.totalValue():6
+  _self.totalDeposited:6
+  _withdrawAmount:6
+  */
   function harvest(Data storage _self, address _recipient) internal returns (uint256, uint256) {
-    // console.log(_self.totalValue());//Gets the total value of the assets that the adapter holds in the vault(adapter 的錢).
-    // console.log(_self.totalDeposited);//在flush 時從formation丟到vault的總額
+    IDetailedERC20 _token = _self.token();
+    uint256 USDT_CONST = (_token.decimals()==6)?1000000000000:1;
     if (_self.totalValue() <= _self.totalDeposited) {
       return (0, 0);
     }
     uint256 _withdrawAmount = _self.totalValue().sub(_self.totalDeposited);
-    return _self.directWithdraw(_recipient, _withdrawAmount);
+    return _self.directWithdraw(_recipient, _withdrawAmount.mul(USDT_CONST));
   }
 
   /// @dev Adds a element to the list.

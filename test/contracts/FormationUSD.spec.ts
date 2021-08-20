@@ -17,7 +17,6 @@ import { min } from "moment";
 import { YearnVaultMock } from "../../types/YearnVaultMock";
 const {parseEther, formatEther,parseUnits} = utils;
 
-
 chai.use(solidity);
 chai.use(chaiSubset);
 
@@ -48,7 +47,6 @@ describe("Formation", () => {
     YearnVaultAdapterUsdFactory = await ethers.getContractFactory("YearnVaultAdapterUSD");
     YearnVaultMockUsdFactory = await ethers.getContractFactory("YearnVaultMockUSD");
     YearnControllerMockFactory = await ethers.getContractFactory("YearnControllerMock");
-
   });
 
   beforeEach(async () => {
@@ -405,7 +403,6 @@ describe("Formation", () => {
       )) as Transmuter;
       await formation.connect(governance).setTransmuter(transmuterContract.address);
       await transmuterContract.connect(governance).setWhitelist(formation.address, true);
-
       await token.mint(await minter.getAddress(), parseEther("10000"));
       await token.connect(minter).approve(formation.address, parseEther("10000"));
     });
@@ -495,7 +492,7 @@ describe("Formation", () => {
      });
 
     describe("recall funds", () => {
-      context("from the active vault", () => {//in this test, since it use yearnmock and yearn adapter, the input decimal should be 6
+      context("from the active vault", () => {
         let adapter: YearnVaultAdapterUsd;
         let controllerMock: YearnControllerMock;
         let vaultMock: YearnVaultMockUsd;
@@ -513,14 +510,13 @@ describe("Formation", () => {
           adapter = await YearnVaultAdapterUsdFactory
             .connect(deployer)
             .deploy(vaultMock.address, formation.address) as YearnVaultAdapterUsd;
-
           await token.mint(await deployer.getAddress(), parseEther("10000"));
           await token.approve(vaultMock.address, parseEther("10000"));
           await formation.connect(governance).initialize(adapter.address)
           await formation.connect(minter).deposit(depositAmt);
           await formation.flush();
-          //need at least one other deposit in the vault to not get underflow errors
-          await vaultMock.connect(deployer).deposit(parseUnits("100",6));//deposit 100USDT
+          // need at least one other deposit in the vault to not get underflow errors
+          await vaultMock.connect(deployer).deposit(parseUnits("100",6));
         });
 
         it("reverts when not an emergency, not governance, and user does not have permission to recall funds from active vault", async () => {
@@ -533,7 +529,7 @@ describe("Formation", () => {
           await formation.connect(governance).recall(0, recallAmt);
           let afterBal = await token.connect(governance).balanceOf(formation.address);
           expect(beforeBal).equal(0);
-          expect(afterBal).equal(recallAmt.mul(USDT_CONST));
+          expect(afterBal).equal(recallAmt);
         });
 
 
@@ -570,15 +566,15 @@ describe("Formation", () => {
           await formation.connect(minter).deposit(depositAmt);
           await formation.connect(minter).flush();
           await formation.connect(governance).migrate(activeAdapter.address);
-
           //need at least one other deposit in the vault to not get underflow errors
-          await vaultMock.connect(deployer).deposit(parseUnits("100",6));//deposit 100USDT
+          await vaultMock.connect(deployer).deposit(parseUnits("100",6));
         });
 
         it("anyone can recall some of the funds to the contract", async () => {
           await formation.connect(minter).recall(0, recallAmt);
-          expect(await token.balanceOf(formation.address)).equal(recallAmt.mul(USDT_CONST));
+          expect(await token.balanceOf(formation.address)).equal(recallAmt);
         });
+
       });
      });
 
@@ -606,13 +602,12 @@ describe("Formation", () => {
             adapter = await YearnVaultAdapterUsdFactory
             .connect(deployer)
             .deploy(vaultMock.address, formation.address) as YearnVaultAdapterUsd;
-
+           
 
           await formation.connect(governance).initialize(adapter.address);
           await token.mint(formation.address, mintAmount);
           await formation.connect(minter).flush();
           });
-
 
           it("flushes funds to the vault", async () => {
             expect(await token.balanceOf(vaultMock.address)).equal(mintAmount);
@@ -628,7 +623,7 @@ describe("Formation", () => {
           controllerMock = await YearnControllerMockFactory
           .connect(deployer)
           .deploy() as YearnControllerMock;
-          //two vault for two adapter
+
         activevaultMock = await YearnVaultMockUsdFactory
           .connect(deployer)
           .deploy(token.address, controllerMock.address) as YearnVaultMockUsd;
@@ -677,7 +672,6 @@ describe("Formation", () => {
         adapter = await YearnVaultAdapterUsdFactory
         .connect(deployer)
         .deploy(vaultMock.address, formation.address) as YearnVaultAdapterUsd;
-
         await formation.connect(governance).initialize(adapter.address);
         await formation
           .connect(governance)
@@ -690,7 +684,7 @@ describe("Formation", () => {
       });
 
       it("deposited amount is accounted for correctly", async () => {
-        let address = await deployer.getAddress();
+        // let address = await deployer.getAddress();
          await formation.connect(minter).deposit(depositAmt);
         expect(
           await formation
@@ -707,12 +701,6 @@ describe("Formation", () => {
         expect(balBefore).equal(balAfter);
       });
 
-      // it("reverts when withdrawing too much", async () => {//err happen, hasn't deal with
-      //   let overdraft = depositAmt.add(parseUnits("1000",6));
-      //   await formation.connect(minter).deposit(depositAmt);
-      //   expect(formation.connect(minter).withdraw(overdraft)).revertedWith("ERC20: transfer amount exceeds balance");//err
-      // });
-
       it("reverts when cdp is undercollateralized", async () => {
         await formation.connect(minter).deposit(depositAmt);
         await formation.connect(minter).mint(mintAmt);
@@ -723,12 +711,12 @@ describe("Formation", () => {
         let balBefore = await token.balanceOf(await minter.getAddress());
         await formation.connect(minter).deposit(depositAmt);
         await formation.connect(minter).mint(mintAmt);
-        await formation.connect(minter).repay(0, mintAmt);//repay with nUSD
-        await formation.connect(minter).withdraw(depositAmt);//withdraw with USDT
+        await formation.connect(minter).repay(0, mintAmt);
+        await formation.connect(minter).withdraw(depositAmt);
         let balAfter = await token.balanceOf(await minter.getAddress());
         expect(balBefore).equal(balAfter);
        });
-//add by Leo
+
       it("deposits, mints, repays with USDT, and withdraws", async () => {
         let balBefore = await token.balanceOf(await minter.getAddress());
         await formation.connect(minter).deposit(depositAmt);
@@ -736,7 +724,7 @@ describe("Formation", () => {
         await formation.connect(minter).repay(repayAmtUSD,0);//repay with USDT
         await formation.connect(minter).withdraw(depositAmt);
         let balAfter = await token.balanceOf(await minter.getAddress());
-        expect(balBefore).equal(balAfter.add(mintAmt));//!!!
+        expect(balBefore).equal(balAfter.add(repayAmtUSD));
       });
 
       it("deposits 5000 USDT, mints 1000 nUSD, and withdraws 3000 USDT", async () => {
@@ -745,7 +733,7 @@ describe("Formation", () => {
         await formation.connect(minter).mint(mintAmt);
         await formation.connect(minter).withdraw(withdrawAmt);
         expect(await token.balanceOf(await minter.getAddress())).equal(
-          parseEther("13000")
+          parseEther("10000").add(parseEther("5000")).sub(parseUnits("5000",6)).add(parseUnits("3000",6))
         );
       });
 
@@ -762,7 +750,7 @@ describe("Formation", () => {
           await formation.connect(minter).deposit(parseUnits("100000",6));
           let balAfterWhale = await token.balanceOf(vaultMock.address);
           expect(balBeforeWhale).equal(0);
-          expect(balAfterWhale).equal(parseEther("100001"));
+          expect(balAfterWhale).equal(parseUnits("100001",6));
         });
 
         it("deposit() does not flush funds if amount < flushActivator", async () => {
@@ -781,7 +769,6 @@ describe("Formation", () => {
       let ceilingAmt = parseEther("10000");
       let collateralizationLimit = "2000000000000000000"; // this should be set in the deploy sequence
       let repayAmtUSD = mintAmt.div(USDT_CONST);
-      //let collateralizationLimit = "2000000";
       beforeEach(async () => {
       controllerMock = await YearnControllerMockFactory
         .connect(deployer)
@@ -815,7 +802,7 @@ describe("Formation", () => {
         await transmuterContract.connect(minter).stake(mintAmt);
         await formation.connect(minter).liquidate(liqAmt);
         const transBal = await token.balanceOf(transmuterContract.address);
-        expect(transBal).equal(mintAmt);
+        expect(transBal).equal(mintAmt.div(USDT_CONST));
       })
       it("liquidates funds from vault if not enough in the buffer", async () => {
         let liqAmt = parseUnits("600",6);
@@ -829,7 +816,7 @@ describe("Formation", () => {
         const formationTokenBalPost = await token.balanceOf(formation.address);
         const transmuterEndingTokenBal = await token.balanceOf(transmuterContract.address);
         expect(formationTokenBalPost).equal(0);
-        expect(transmuterEndingTokenBal).equal(liqAmt.mul(USDT_CONST));
+        expect(transmuterEndingTokenBal).equal(liqAmt);
       })
       it("liquidates the minimum necessary from the formation buffer", async () => {
         let dep2Amt = parseUnits("500",6);
@@ -844,12 +831,12 @@ describe("Formation", () => {
         const formationTokenBalPost = await token.balanceOf(formation.address);
 
         const transmuterEndingTokenBal = await token.balanceOf(transmuterContract.address);
-        expect(formationTokenBalPost).equal(dep2Amt.sub(liqAmt).mul(USDT_CONST));
-        expect(transmuterEndingTokenBal).equal(liqAmt.mul(USDT_CONST));
+        expect(formationTokenBalPost).equal(dep2Amt.sub(liqAmt));
+        expect(transmuterEndingTokenBal).equal(liqAmt);
       })
       it("deposits, mints nUsd, repays, and has no outstanding debt", async () => {
         await formation.connect(minter).deposit(depositAmt.sub(parseUnits("1000",6)));
-        await formation.connect(minter).mint(mintAmt);//add debt
+        await formation.connect(minter).mint(mintAmt);
         await transmuterContract.connect(minter).stake(mintAmt);
         await formation.connect(minter).repay(repayAmtUSD, 0);//repay with USDT, sub debt
         expect(await formation.connect(minter).getCdpTotalDebt(await minter.getAddress())).equal(0)
@@ -857,7 +844,7 @@ describe("Formation", () => {
       it("deposits, mints, repays, and has no outstanding debt", async () => {
         await formation.connect(minter).deposit(depositAmt);
         await formation.connect(minter).mint(mintAmt);
-        await formation.connect(minter).repay(0, mintAmt);//repay with nUSD
+        await formation.connect(minter).repay(0, mintAmt);
         expect(
           await formation
             .connect(minter)
@@ -948,50 +935,20 @@ describe("Formation", () => {
           await formation.connect(minter).mint(mintAmt);
           let balAfter = await token.balanceOf(await minter.getAddress());
 
-          expect(balAfter).equal(balBefore.sub(depositAmt.mul(USDT_CONST)));
+          expect(balAfter).equal(balBefore.sub(depositAmt));
           expect(await nUsd.balanceOf(await minter.getAddress())).equal(mintAmt);
         });
 
-        describe("flushActivator", async () => {
-          beforeEach(async () => {
-            await nUsd.connect(deployer).setCeiling(formation.address, parseEther("200000"));
-            await token.mint(await minter.getAddress(), parseEther("200000"));
-            await token.connect(minter).approve(formation.address, parseEther("200000"));
-          });
 
-          it("mint() flushes funds if amount >= flushActivator", async () => {
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            let balBeforeWhale = await token.balanceOf(vaultMock.address);
-            await formation.connect(minter).mint(parseEther("100000"));
-            let balAfterWhale = await token.balanceOf(vaultMock.address);
-            expect(balBeforeWhale).equal(0);
-            expect(balAfterWhale).equal(parseEther("200000"));
-          });
-
-          it("mint() does not flush funds if amount < flushActivator", async () => {
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            await formation.connect(minter).deposit(parseUnits("50000",6));
-            let balBeforeWhale = await token.balanceOf(vaultMock.address);
-            await formation.connect(minter).mint(parseEther("99999"));
-            let balAfterWhale = await token.balanceOf(vaultMock.address);
-            expect(balBeforeWhale).equal(0);
-            expect(balAfterWhale).equal(0);
-          });
-        });
       });
     });
 
-    describe("harvest", () => {//err happen because after changing adapter to yearnvaultadapter, there is deviation
+    describe("harvest", () => {
       let depositAmt = parseUnits("5000",6);
       let mintAmt = parseEther("1000");
       let stakeAmt = mintAmt.div(2);
       let ceilingAmt = parseEther("10000");
-      let yieldAmt = parseEther("100");
+      let yieldAmt = parseUnits("100",6);
 
       beforeEach(async () => {
       controllerMock = await YearnControllerMockFactory
@@ -1013,34 +970,29 @@ describe("Formation", () => {
         await formation.connect(user).deposit(depositAmt);
         await formation.connect(user).mint(mintAmt);
         await transmuterContract.connect(user).stake(stakeAmt);
-        await formation.flush();//flush 進去vault(從formation)
+        await formation.flush();
       });
 
       it("harvests yield from the vault", async () => {
-        await token.mint(vaultMock.address, yieldAmt);//直接mint 給vault, token mint 會增加adapter 在vault hold 的value
-        await formation.harvest(0);//!!!
+        await token.mint(vaultMock.address, yieldAmt);
+        await formation.harvest(0);
         let transmuterBal = await token.balanceOf(transmuterContract.address);
-        //yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)): 在formation的_distributeAmount,在harvest的時候已經打到transmuter.
-        expect(transmuterBal).equal(yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)));
+        //expect(transmuterBal).equal(yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)));
+        expect(transmuterBal.sub(yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)))).to.be.at.most(1);//since pricepershare
         let vaultBal = await token.balanceOf(vaultMock.address);
         //expect(vaultBal).equal(depositAmt.mul(USDT_CONST));
-
-        expect(vaultBal.sub(depositAmt.mul(USDT_CONST))).to.be.at.most(1);//因為pricepershare有誤差
+        expect(vaultBal.sub(depositAmt.mul(USDT_CONST))).to.be.at.most(1);//since pricepershare
       })
 
       it("sends the harvest fee to the rewards address", async () => {
         await token.mint(vaultMock.address, yieldAmt);
         await formation.harvest(0);
         let rewardsBal = await token.balanceOf(await rewards.getAddress());
-        //建議和上面的test case 統一寫法:
         //expect(rewardsBal).equal(yieldAmt.div(pctReso/harvestFee));
-        expect(yieldAmt.div(pctReso/harvestFee).sub(rewardsBal)).to.be.at.most(1);//因為pricepershare有誤差
-        
-        //原本test case
-        //expect(rewardsBal).equal(yieldAmt.mul(100).div(harvestFee));
+        expect(yieldAmt.div(pctReso/harvestFee).sub(rewardsBal)).to.be.at.most(1);//since pricepershare
       })
 
-      it("does not update any balances if there is nothing to harvest", async () => {//因為沒有mint
+      it("does not update any balances if there is nothing to harvest", async () => {
         let initTransBal = await token.balanceOf(transmuterContract.address);
         let initRewardsBal = await token.balanceOf(await rewards.getAddress());
         await formation.harvest(0);
