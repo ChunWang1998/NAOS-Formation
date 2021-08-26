@@ -736,7 +736,6 @@ contract Formation is  ReentrancyGuard {
   function _withdrawFundsTo(address _recipient, uint256 _amount) internal returns (uint256, uint256) {
     // Pull the funds from the buffer.
     uint256 _bufferedAmount = Math.min(_amount, token.balanceOf(address(this)));
-
     if (_recipient != address(this)) {
       token.safeTransfer(_recipient, _bufferedAmount);
     }
