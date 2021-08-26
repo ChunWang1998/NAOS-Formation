@@ -437,7 +437,6 @@ contract FormationUSD is ReentrancyGuard {
                 PERCENT_RESOLUTION
             );
             uint256 _distributeAmount = _harvestedAmount.sub(_feeAmount);
-            //TODO:
             FixedPointMath.uq192x64 memory _weight = FixedPointMath
                 .fromU256(_distributeAmount)
                 .div(totalDeposited);

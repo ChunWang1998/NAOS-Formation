@@ -171,7 +171,6 @@ contract Transmuter is Context {
     ///@dev claims the base token after it has been transmuted
     ///
     ///This function reverts if there is no realisedToken balance
-    //TODO: check value should be 6
     function claim() public {
         address sender = msg.sender;
         require(realisedTokens[sender] > 0);
