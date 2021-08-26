@@ -908,7 +908,7 @@ contract TransmuterV2 is Context {
         // leave enough funds to service any pending transmutations
         uint256 totalFunds = IERC20Burnable(token).balanceOf(address(this));
         uint256 migratableFunds = totalFunds.sub(
-            totalSupplyNtokens,
+            totalSupplyNtokens.div(USDT_CONST),
             "not enough funds to service stakes"
         );
         IERC20Burnable(token).approve(migrateTo, migratableFunds);

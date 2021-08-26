@@ -373,7 +373,7 @@ describe("TransmuterV2", () => {
     describe("ensureSufficientFundsExistLocally()", async () => {
 
       let distributeAmt = utils.parseUnits("500",6);
-      let plantableThreshold = parseEther("100");
+      let plantableThreshold = parseUnits("100",6);
       let transmuterPreClaimBal;
       let userPreClaimBal;
       let vaultPreClaimBal;
@@ -409,7 +409,7 @@ describe("TransmuterV2", () => {
           expect(transmuterPostClaimBal).equal(plantableThreshold);
 
           let vaultPostClaimBal = await transVaultAdaptor.totalValue();
-          expect(vaultPostClaimBal).equal(vaultPreClaimBal.sub(stakeAmt))
+          expect(vaultPostClaimBal).equal(vaultPreClaimBal.sub(stakeAmt.div(USDT_CONST)))
         })
   
         it("recalls all funds from the vault if the vault contains less than plantableThreshold", async () => {
@@ -420,7 +420,7 @@ describe("TransmuterV2", () => {
           await transmuter.claim();
 
           let transmuterPostClaimBal = await token.balanceOf(transmuter.address);
-          expect(transmuterPostClaimBal).equal(distributeAmt.sub(stakeAmt.add(stakeAmt2)))
+          expect(transmuterPostClaimBal).equal(distributeAmt.sub((stakeAmt.add(stakeAmt2)).div(USDT_CONST)))
 
           let vaultPostClaimBal = await transVaultAdaptor.totalValue();
           expect(vaultPostClaimBal).equal(0)
@@ -649,7 +649,7 @@ describe("TransmuterV2", () => {
       it("increases buffer size, and userInfo() shows the correct state without an extra nudge", async () => {
         let stakeAmt = utils.parseEther("1000");
         await transmuter.connect(depositor).stake(stakeAmt);
-        await transmuter.connect(mockFormation).distribute(mockFormationAddress, stakeAmt)
+        await transmuter.connect(mockFormation).distribute(mockFormationAddress, stakeAmt.div(USDT_CONST))
         await mineBlocks(ethers.provider, 10);
         let userInfo = await transmuter.userInfo(await depositor.getAddress());
         let bufferInfo = await transmuter.bufferInfo();
@@ -667,7 +667,7 @@ describe("TransmuterV2", () => {
       let stakeAmt = parseEther("50");
       let transmuterPreDistributeBal;
       let transmuterPostDistributeBal;
-      let plantableThreshold = parseEther("100");
+      let plantableThreshold = parseUnits("100",6);
       let plantableMargin = "10";
       let vaultPreDistributeBal;
 
@@ -711,7 +711,7 @@ describe("TransmuterV2", () => {
             await transmuter.connect(mockFormation).distribute(mockFormationAddress, distributeAmt1);
   
             vaultPostDistributeBal = await transVaultAdaptor.totalValue();
-            expect(vaultPostDistributeBal).equal(vaultPreDistributeBal.sub(parseEther("25")));
+            expect(vaultPostDistributeBal).equal(vaultPreDistributeBal.sub(parseUnits("25",6)));
           })
     
           it("recalls the exact amount of funds needed to reach plantableThreshold", async () => {
@@ -748,7 +748,7 @@ describe("TransmuterV2", () => {
           let distributeAmt = parseUnits("150",6);
           await transmuter.connect(mockFormation).distribute(mockFormationAddress, distributeAmt);
           let vaultPostDistributeBal = await transVaultAdaptor.totalValue();
-          expect(vaultPostDistributeBal).equal(vaultPreDistributeBal.add(parseEther("50")));
+          expect(vaultPostDistributeBal).equal(vaultPreDistributeBal.add(parseUnits("50",6)));
         })
   
         it("sends the exact amount of funds in excess to reach plantableThreshold", async () => {
@@ -787,7 +787,7 @@ describe("TransmuterV2", () => {
 
   describe("recall", async () => {
     describe("recallAllFundsFromVault()", async () => {
-      let plantableThreshold = parseEther("100");
+      let plantableThreshold = parseUnits("100",6);
       let stakeAmt = parseEther("100");
       let distributeAmt = utils.parseUnits("150",6);
 
@@ -818,7 +818,7 @@ describe("TransmuterV2", () => {
         let transmuterPostRecallBal = await token.balanceOf(transmuter.address);
         let vaultPostRecallBal = await transVaultAdaptor.totalValue()
         
-        expect(transmuterPostRecallBal).equal(transmuterPreRecallBal.add(parseEther("50")));
+        expect(transmuterPostRecallBal).equal(transmuterPreRecallBal.add(parseUnits("50",6)));
         expect(vaultPostRecallBal).equal(0);
       })
 
@@ -841,7 +841,7 @@ describe("TransmuterV2", () => {
     })
 
     describe("recallFundsFromVault", async () => {
-      let plantableThreshold = parseEther("100");
+      let plantableThreshold = parseUnits("100",6);
       let stakeAmt = parseEther("100");
       let distributeAmt = utils.parseUnits("150",6);
       let recallAmt = parseUnits("10",6);
@@ -898,7 +898,7 @@ describe("TransmuterV2", () => {
 
   describe("harvest()", () => {
     let transmutationPeriod = 10;
-    let plantableThreshold = parseEther("100");
+    let plantableThreshold = parseUnits("100",6);
     let stakeAmt = parseEther("50");
     let yieldAmt = parseUnits("10",6);
 
@@ -923,7 +923,7 @@ describe("TransmuterV2", () => {
 
   describe("migrateFunds()", () => {
     let transmutationPeriod = 10;
-    let plantableThreshold = parseEther("20");
+    let plantableThreshold = parseUnits("20",6);
     let stakeAmt = parseEther("50");
     let distributeAmt = parseUnits("100",6);
     let newTransmuter: TransmuterV2;
@@ -977,9 +977,10 @@ describe("TransmuterV2", () => {
       await transmuter.connect(governance).migrateFunds(newTransmuter.address);
 
       let transmuterPostMigrateBal = await token.balanceOf(transmuter.address);
-      expect(transmuterPostMigrateBal).equal(stakeAmt);
+      expect(transmuterPostMigrateBal).equal(stakeAmt.div(USDT_CONST));
 
-      let amountMigrated = distributeAmt.sub(stakeAmt);
+      let amountMigrated = distributeAmt.sub(stakeAmt.div(USDT_CONST));
+
       let newTransmuterPostMigrateBal = await token.balanceOf(newTransmuter.address);
       expect(newTransmuterPostMigrateBal).equal(newTransmuterPreMigrateBal.add(amountMigrated))
     })
