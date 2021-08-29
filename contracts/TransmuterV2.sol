@@ -383,7 +383,7 @@ contract TransmuterV2 is Context {
         pendingz = depositedNTokens[toTransmute].div(USDT_CONST);
         pendingz_USDT = pendingz.mul(USDT_CONST);
         // decrease ntokens
-        depositedNTokens[toTransmute] = 0;
+        depositedNTokens[toTransmute] = depositedNTokens[toTransmute].sub(pendingz_USDT);
 
         // BURN ntokens
         IERC20Burnable(NToken).burn(pendingz_USDT);
