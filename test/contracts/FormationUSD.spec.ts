@@ -690,7 +690,7 @@ describe("Formation", () => {
           await formation
             .connect(minter)
             .getCdpTotalDeposited(await minter.getAddress())
-        ).equal(depositAmt.mul(USDT_CONST));
+        ).equal(depositAmt);
       });
 
       it("deposits token and then withdraws all", async () => {
@@ -721,7 +721,7 @@ describe("Formation", () => {
         let balBefore = await token.balanceOf(await minter.getAddress());
         await formation.connect(minter).deposit(depositAmt);
         await formation.connect(minter).mint(mintAmt);
-        await formation.connect(minter).repay(repayAmtUSD,0);//repay with USDT
+        await formation.connect(minter).repay(repayAmtUSD,0);
         await formation.connect(minter).withdraw(depositAmt);
         let balAfter = await token.balanceOf(await minter.getAddress());
         expect(balBefore).equal(balAfter.add(repayAmtUSD));
@@ -793,7 +793,7 @@ describe("Formation", () => {
       });
       it("repay with USDT reverts when nothing is minted and transmuter has no nUsd deposits", async () => {
         await formation.connect(minter).deposit(depositAmt.sub(parseUnits("1000",6)))
-        expect(formation.connect(minter).repay(repayAmtUSD, 0)).revertedWith("SafeMath: subtraction overflow")//repay with USDT
+        expect(formation.connect(minter).repay(repayAmtUSD, 0)).revertedWith("SafeMath: subtraction overflow")
       })
       it("liquidate max amount possible if trying to liquidate too much", async () => {
         let liqAmt = depositAmt;
@@ -838,7 +838,7 @@ describe("Formation", () => {
         await formation.connect(minter).deposit(depositAmt.sub(parseUnits("1000",6)));
         await formation.connect(minter).mint(mintAmt);
         await transmuterContract.connect(minter).stake(mintAmt);
-        await formation.connect(minter).repay(repayAmtUSD, 0);//repay with USDT, sub debt
+        await formation.connect(minter).repay(repayAmtUSD, 0);
         expect(await formation.connect(minter).getCdpTotalDebt(await minter.getAddress())).equal(0)
       })
       it("deposits, mints, repays, and has no outstanding debt", async () => {
@@ -855,7 +855,7 @@ describe("Formation", () => {
         await formation.connect(minter).deposit(depositAmt.sub(parseUnits("1000",6)));
         await formation.connect(minter).mint(mintAmt);
         await transmuterContract.connect(minter).stake(parseEther("500"));
-        await formation.connect(minter).repay(parseUnits("500",6), parseEther("500"));//repay both USDT and nUSD
+        await formation.connect(minter).repay(parseUnits("500",6), parseEther("500"));
         expect(await formation.connect(minter).getCdpTotalDebt(await minter.getAddress())).equal(0)
       })
 
@@ -864,7 +864,7 @@ describe("Formation", () => {
         await formation.connect(minter).mint(mintAmt);
         await transmuterContract.connect(minter).stake(mintAmt);
         await formation.connect(minter).liquidate(mintAmt.div(USDT_CONST));
-        expect( await formation.connect(minter).getCdpTotalDeposited(await minter.getAddress())).equal(depositAmt.mul(USDT_CONST).sub(mintAmt))
+        expect( await formation.connect(minter).getCdpTotalDeposited(await minter.getAddress())).equal(depositAmt.sub(mintAmt.div(USDT_CONST)))
       });
     });
 
@@ -978,10 +978,10 @@ describe("Formation", () => {
         await formation.harvest(0);
         let transmuterBal = await token.balanceOf(transmuterContract.address);
         //expect(transmuterBal).equal(yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)));
-        expect(transmuterBal.sub(yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)))).to.be.at.most(1);//since pricepershare
+        expect(transmuterBal.sub(yieldAmt.sub(yieldAmt.div(pctReso/harvestFee)))).to.be.at.most(1);
         let vaultBal = await token.balanceOf(vaultMock.address);
         //expect(vaultBal).equal(depositAmt.mul(USDT_CONST));
-        expect(vaultBal.sub(depositAmt.mul(USDT_CONST))).to.be.at.most(1);//since pricepershare
+        expect(vaultBal.sub(depositAmt.mul(USDT_CONST))).to.be.at.most(1);
       })
 
       it("sends the harvest fee to the rewards address", async () => {
@@ -989,7 +989,7 @@ describe("Formation", () => {
         await formation.harvest(0);
         let rewardsBal = await token.balanceOf(await rewards.getAddress());
         //expect(rewardsBal).equal(yieldAmt.div(pctReso/harvestFee));
-        expect(yieldAmt.div(pctReso/harvestFee).sub(rewardsBal)).to.be.at.most(10000000);//since pricepershare
+        expect(yieldAmt.div(pctReso/harvestFee).sub(rewardsBal)).to.be.at.most(10000000);
       })
 
       it("does not update any balances if there is nothing to harvest", async () => {

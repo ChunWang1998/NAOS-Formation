@@ -331,7 +331,6 @@ describe("Transmuter", () => {
     });
 
     it("transmutes the staked amount and distributes overflow if a bucket overflows", async () => {
-      console.log("start");
       // 1) DEPOSITOR stakes 100 USDT
       // 2) distribution of 90 USDT, let transmutation period pass
       // DEPOSITOR gets 90 USDT

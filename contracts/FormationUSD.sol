@@ -198,7 +198,7 @@ contract FormationUSD is ReentrancyGuard {
         sentinel = _sentinel;
         flushActivator = _flushActivator; // Recommend(if the token decimals is 18): 100000 ether
 
-        USDT_CONST = uint256(10)**(_xtoken.decimals() - _token.decimals());
+        USDT_CONST = uint256(10)**(uint256(_xtoken.decimals()).sub(uint256(_token.decimals())));
 
         uint256 COLL_LIMIT = MINIMUM_COLLATERALIZATION_LIMIT.mul(2);
         _ctx.collateralizationLimit = FixedPointMath.uq192x64(COLL_LIMIT);
@@ -415,12 +415,7 @@ contract FormationUSD is ReentrancyGuard {
     /// @param _vaultId the identifier of the vault to harvest from.
     ///
     /// @return the amount of funds that were harvested from the vault.
-    /*
-  _harvestedAmount:18
-  _decreasedValue:18
-  _feeAmount:18
-  _distributeAmount:18
-  */
+
     function harvest(uint256 _vaultId)
         external
         expectInitialized
@@ -445,7 +440,6 @@ contract FormationUSD is ReentrancyGuard {
             );
 
             if (_feeAmount > 0) {
-                //token.safeTransfer(rewards, _feeAmount.div(USDT_CONST));
                 token.safeTransfer(rewards, _feeAmount);
             }
 
@@ -508,9 +502,7 @@ contract FormationUSD is ReentrancyGuard {
     /// additional funds.
     ///
     /// @param _amount the amount of collateral to deposit.
-    /*
-  totalDeposited:18
-  */
+
     function deposit(uint256 _amount)
         external
         nonReentrant
@@ -593,6 +585,7 @@ contract FormationUSD is ReentrancyGuard {
     {
         CDP.Data storage _cdp = _cdps[msg.sender];
         _cdp.update(_ctx);
+        uint256 _parentAmount_USDT = 0;
 
         if (_parentAmount > 0) {
             token.safeTransferFrom(
@@ -601,7 +594,7 @@ contract FormationUSD is ReentrancyGuard {
                 _parentAmount
             );
             _distributeToTransmuter(_parentAmount);
-            _parentAmount = _parentAmount.mul(USDT_CONST);
+            _parentAmount_USDT = _parentAmount.mul(USDT_CONST);
         }
 
         if (_childAmount > 0) {
@@ -610,7 +603,7 @@ contract FormationUSD is ReentrancyGuard {
             xtoken.lowerHasMinted(_childAmount);
         }
 
-        uint256 _totalAmount = _parentAmount.add(_childAmount);
+        uint256 _totalAmount = _parentAmount_USDT.add(_childAmount);
         _cdp.totalDebt = _cdp.totalDebt.sub(_totalAmount, "");
 
         emit TokensRepaid(msg.sender, _parentAmount, _childAmount);
@@ -619,12 +612,7 @@ contract FormationUSD is ReentrancyGuard {
     /// @dev Attempts to liquidate part of a CDP's collateral to pay back its debt.
     ///
     /// @param _amount the amount of collateral to attempt to liquidate.
-    /*
-  _amount input:6
-  _cdp.totalDebt:18
-  _withdrawnAmount:18
-  _decreasedValue:18
-  */
+
     function liquidate(uint256 _amount)
         external
         nonReentrant
@@ -648,10 +636,10 @@ contract FormationUSD is ReentrancyGuard {
         //changed to new transmuter compatibillity
  
         _distributeToTransmuter(_withdrawnAmount);
-        _withdrawnAmount = _withdrawnAmount.mul(USDT_CONST);
-        _decreasedValue = _decreasedValue.mul(USDT_CONST);
-        _cdp.totalDeposited = _cdp.totalDeposited.sub(_decreasedValue, "");
-        _cdp.totalDebt = _cdp.totalDebt.sub(_withdrawnAmount, "");
+        uint256 _withdrawnAmount_USDT = _withdrawnAmount.mul(USDT_CONST);
+        uint256 _decreasedValue_USDT = _decreasedValue.mul(USDT_CONST);
+        _cdp.totalDeposited = _cdp.totalDeposited.sub(_decreasedValue_USDT, "");
+        _cdp.totalDebt = _cdp.totalDebt.sub(_withdrawnAmount_USDT, "");
         emit TokensLiquidated(
             msg.sender,
             _amount,
@@ -659,7 +647,7 @@ contract FormationUSD is ReentrancyGuard {
             _decreasedValue
         );
 
-        return (_withdrawnAmount, _decreasedValue);
+        return (_withdrawnAmount_USDT, _decreasedValue_USDT);
     }
 
     /// @dev Mints synthetic tokens by either claiming credit or increasing the debt.
@@ -741,7 +729,7 @@ contract FormationUSD is ReentrancyGuard {
         returns (uint256)
     {
         CDP.Data storage _cdp = _cdps[_account];
-        return _cdp.totalDeposited;
+        return _cdp.totalDeposited.div(USDT_CONST);
     }
 
     /// @dev Get the total amount of formation tokens borrowed from a CDP.
@@ -789,7 +777,7 @@ contract FormationUSD is ReentrancyGuard {
         token.approve(transmuter, amount);
         ITransmuter(transmuter).distribute(address(this), amount);
         // lower debt cause of 'burn'
-        xtoken.lowerHasMinted(amount);
+        xtoken.lowerHasMinted(amount.mul(USDT_CONST));
     }
 
     /// @dev Checks that parent token is on peg.
@@ -809,7 +797,7 @@ contract FormationUSD is ReentrancyGuard {
                 block.timestamp <= updatedAt.add(oracleUpdateDelay),
                 "Update time exceeded"
             );
-            require(uint256(answer) > pegMinimum, "off peg limitation");
+            require(uint256(answer).mul(USDT_CONST) > pegMinimum, "off peg limitation");
         }
         _;
     }
@@ -893,12 +881,7 @@ contract FormationUSD is ReentrancyGuard {
     ///
     /// @param _recipient the account to withdraw the funds to.
     /// @param _amount    the amount of funds to withdraw.
-    /*
-  _amount input:18
-  token.balanceOf(address(this)):6
-  _bufferedAmount:18
-  _remainingAmount:18
-  */
+
     function _withdrawFundsTo(address _recipient, uint256 _amount)
         internal
         returns (uint256, uint256)

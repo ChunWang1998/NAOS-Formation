@@ -7,12 +7,10 @@ import "@openzeppelin/contracts/utils/Address.sol";
 import "./interfaces/IERC20Burnable.sol";
 import {YearnVaultAdapterWithIndirection} from "./adapters/YearnVaultAdapterWithIndirection.sol";
 import {VaultWithIndirection} from "./libraries/formation/VaultWithIndirection.sol";
-import {IMintableERC20} from "./interfaces/IMintableERC20.sol";
 import {ITransmuter} from "./interfaces/ITransmuter.sol";
 
 contract TransmuterV2 is Context {
     using SafeMath for uint256;
-    using SafeERC20 for IMintableERC20;
     using SafeERC20 for IERC20Burnable;
     using Address for address;
     using VaultWithIndirection for VaultWithIndirection.Data;
@@ -44,7 +42,7 @@ contract TransmuterV2 is Context {
     uint256 public unclaimedDividends;
 
     uint256 public USDT_CONST;
-    uint256 public pendingz_USDT;
+    uint256 pendingz_USDT;
 
     /// @dev formation addresses whitelisted
     mapping(address => bool) public whiteList;
@@ -138,8 +136,8 @@ contract TransmuterV2 is Context {
         address _governance
     ) public {
         require(_governance != ZERO_ADDRESS, "Transmuter: 0 gov");
-        require(IMintableERC20(_token).decimals() <= IMintableERC20(_NToken).decimals(),"Transmuter: xtoken decimals should be larger than token decimals");
-        USDT_CONST = uint256(10)**(IMintableERC20(_NToken).decimals() - IMintableERC20(_token).decimals());
+        require(IERC20Burnable(_token).decimals() <= IERC20Burnable(_NToken).decimals(),"Transmuter: xtoken decimals should be larger than token decimals");
+        USDT_CONST = uint256(10)**(uint256(IERC20Burnable(_NToken).decimals()).sub(uint256(IERC20Burnable(_token).decimals())));
         governance = _governance;
         NToken = _NToken;
         token = _token;
@@ -332,11 +330,8 @@ contract TransmuterV2 is Context {
 
             // remove overflow
             pendingz = depositedNTokens[sender].div(USDT_CONST);
-            pendingz_USDT = depositedNTokens[sender];
         }
-        else{
-            pendingz_USDT = pendingz.mul(USDT_CONST);
-        }
+        pendingz_USDT = pendingz.mul(USDT_CONST);
         // decrease ntokens
         depositedNTokens[sender] = depositedNTokens[sender].sub(pendingz_USDT);
 

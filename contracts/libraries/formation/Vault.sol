@@ -64,9 +64,7 @@ library Vault {
   ///
   /// @param _recipient the account to withdraw the tokens to.
   /// @param _amount    the amount of tokens to withdraw.
-  /*
-  _amount:18
-  */
+
   function withdraw(Data storage _self, address _recipient, uint256 _amount) internal returns (uint256, uint256) {
     (uint256 _withdrawnAmount, uint256 _decreasedValue) = _self.directWithdraw(_recipient, _amount);
     _self.totalDeposited = _self.totalDeposited.sub(_decreasedValue);
@@ -77,11 +75,7 @@ library Vault {
   ///
   /// @param _recipient the account to withdraw the tokens to.
   /// @param _amount    the amount of tokens to withdraw.(decimal:18)
-  /*
-  _amount:18
-  _token.balanceOf(_recipient):6
-  _self.totalValue():6
-  */
+
   function directWithdraw(Data storage _self, address _recipient, uint256 _amount) internal returns (uint256, uint256) {
     IDetailedERC20 _token = _self.token();
 
@@ -109,11 +103,7 @@ library Vault {
   /// @dev Harvests yield from the vault.
   ///
   /// @param _recipient the account to withdraw the harvested yield to.
-  /*
-  _self.totalValue():6
-  _self.totalDeposited:6
-  _withdrawAmount:6
-  */
+
   function harvest(Data storage _self, address _recipient) internal returns (uint256, uint256) {
     if (_self.totalValue() <= _self.totalDeposited) {
       return (0, 0);
