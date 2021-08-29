@@ -381,7 +381,7 @@ contract TransmuterV2 is Context {
         uint256 diff = pendingz.mul(USDT_CONST).sub(depositedNTokens[toTransmute]);
         // remove overflow
         pendingz = depositedNTokens[toTransmute].div(USDT_CONST);
-        pendingz_USDT = depositedNTokens[toTransmute];
+        pendingz_USDT = pendingz.mul(USDT_CONST);
         // decrease ntokens
         depositedNTokens[toTransmute] = 0;
 

@@ -636,10 +636,8 @@ contract FormationUSD is ReentrancyGuard {
         //changed to new transmuter compatibillity
  
         _distributeToTransmuter(_withdrawnAmount);
-        uint256 _withdrawnAmount_USDT = _withdrawnAmount.mul(USDT_CONST);
-        uint256 _decreasedValue_USDT = _decreasedValue.mul(USDT_CONST);
-        _cdp.totalDeposited = _cdp.totalDeposited.sub(_decreasedValue_USDT, "");
-        _cdp.totalDebt = _cdp.totalDebt.sub(_withdrawnAmount_USDT, "");
+        _cdp.totalDeposited = _cdp.totalDeposited.sub(_decreasedValue.mul(USDT_CONST), "");
+        _cdp.totalDebt = _cdp.totalDebt.sub(_withdrawnAmount.mul(USDT_CONST), "");
         emit TokensLiquidated(
             msg.sender,
             _amount,
@@ -647,7 +645,7 @@ contract FormationUSD is ReentrancyGuard {
             _decreasedValue
         );
 
-        return (_withdrawnAmount_USDT, _decreasedValue_USDT);
+        return (_withdrawnAmount, _decreasedValue);
     }
 
     /// @dev Mints synthetic tokens by either claiming credit or increasing the debt.
